@@ -558,7 +558,7 @@ def convert_flux(path_to_file,output_file_name):
     x_array=[]
     y_array=[]
     for i in range(0,data.shape[0]):
-        factor=cte.c.value/((data[i][0]*1e-6)**2) # (m/s/m^2)
+        factor=c.c.value/((data[i][0]*1e-6)**2) # (m/s/m^2)
         flux_min=factor*(data[i][1]*1e-26) # from Jy to W/m^3
         x_array.append(data[i][0]) # microns
         y_array.append(flux_min/1e6) # W/m^2/microns
