@@ -21,7 +21,7 @@ def convolve_model(data,fov,npix,beam_x,beam_y,PA_beam):
     theta_min=beam_y/pxsize # px
 
     # Beam orientation
-    angle=((90.0+PA_beam)*units.deg).to(units.rad).value
+    angle=((90.0+PA_beam)*u.deg).to(u.rad).value
 
     # Standard deviations
     sigma_maj=theta_maj/2.3548 # px
@@ -54,7 +54,7 @@ def convolve_observation(data,pxsize,beam_x,beam_y,PA_beam):
     theta_min=beam_y/pxsize # px
 
     # Beam orientation
-    angle=((90.0+PA_beam)*units.deg).to(units.rad).value
+    angle=((90.0+PA_beam)*u.deg).to(u.rad).value
 
     # Standard deviations
     sigma_maj=theta_maj/2.3548 # px
