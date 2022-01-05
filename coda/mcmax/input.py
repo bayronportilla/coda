@@ -455,10 +455,8 @@ def find_mass_temp(fobj,psize,cprodimo):
     plt.show()
     #plt.show()
 
-
-
-
     return None
+
 
 def Lfuv(M,R,Mdot,Rin=None):
 
@@ -539,3 +537,32 @@ def iposition(PA_disk,ri,PAi):
     y_mcmax=pos_rotated[0]
 
     return (x_mcmax,y_mcmax)
+
+
+def convert_flux(path_to_file,output_file_name):
+
+    ############################################################
+    #
+    # This module converts the file ('path_to_file') generated
+    # by MCMax3D into a two column file ('output_file_name')
+    # with col1: wavelenght in microns and col2: flux in
+    # W/m2/micron. The input file is assumed to contain two
+    # columns with col1: wavelength in microns and col2:
+    # flux in Jy. This is the standar MCMax3D units for the
+    # output observables.
+    #
+    ############################################################
+
+    # Loading MCMax3D output file
+    data=np.loadtxt(path_to_file)
+    x_array=[]
+    y_array=[]
+    for i in range(0,data.shape[0]):
+        factor=cte.c.value/((data[i][0]*1e-6)**2) # (m/s/m^2)
+        flux_min=factor*(data[i][1]*1e-26) # from Jy to W/m^3
+        x_array.append(data[i][0]) # microns
+        y_array.append(flux_min/1e6) # W/m^2/microns
+    file=open('%s'%output_file_name,'w')
+    for i in range(0,len(x_array)):
+        file.write('%.15e %.15e\n'%(x_array[i],y_array[i]))
+    return file
