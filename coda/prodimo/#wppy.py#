@@ -1,0 +1,118 @@
+from coda.mcmax.header import *
+from prodimopy.read import calc_surfd
+
+''' Wppy (Wrapper for ProDiMoPy) is largely based on the 
+reading routines availabe in ProDiMoPy. '''
+
+def wppy_sdd(save=None):
+    ''' Read the model '''
+    model=read_prodimo()
+
+    ''' Get the data. sdd containes the surface density 
+    of the upper hemisphere of the disk. tsdd containes 
+    the total surface density '''
+
+    sdd=np.reshape(model.sdd[:,0:1],model.sdd.shape[0])
+    tsdd=2*sdd
+    x=np.reshape(model.x[:,0],model.x.shape[0])
+
+    ''' Save to a file? '''
+    if save:
+        f=open("wppy_sdd.dat","w")
+        for i,j in zip(x,tsdd):
+            print(i,j)
+            f.write("%.15e %.15e\n"%(i,j))
+        f.close()
+
+    ''' Plot '''
+    fig,ax=plt.subplots(1,1)
+    ax.plot(x,tsdd,'+')
+    ax.set(yscale="log")
+    plt.show()
+
+    return None
+
+def wppy_sigmaa():
+    ''' Read the model '''
+    model=read_prodimo()
+
+    ''' Get the data. sdd containes the surface density 
+    of the upper hemisphere of the disk. tsdd containes 
+    the total surface density '''
+
+    sigma_full=model.dust.sigmaa
+    x=np.reshape(model.x[:,0],model.x.shape[0])
+    a=model.dust.asize
+
+    fig,ax=plt.subplots(1,1)
+    for i in range(sigma_full.shape[0]):
+        ax.plot(x,sigma_full[i],label="%e"%a[i])
+
+    ax.set(yscale='log')
+    ax.legend()
+    plt.show()
+    sys.exit()
+    sdd=np.reshape(model.sdd[:,0:1],model.sdd.shape[0])
+    tsdd=2*sdd
+    x=np.reshape(model.x[:,0],model.x.shape[0])
+
+    ''' Save to a file? '''
+    if save:
+        f=open("wppy_sdd.dat","w")
+        for i,j in zip(x,tsdd):
+            print(i,j)
+            f.write("%.15e %.15e\n"%(i,j))
+        f.close()
+
+    ''' Plot '''
+    fig,ax=plt.subplots(1,1)
+    ax.plot(x,tsdd,'+')
+    ax.set(yscale="log")
+    plt.show()
+
+    return None
+
+def wppy_td():
+    model=read_prodimo()
+    x=np.reshape(model.x[:,0],model.x.shape[0])
+    td_z0=np.reshape(model.td[:,0],model.td.shape[0])
+
+
+    ''' Plot '''
+    fig,ax=plt.subplots(1,1)
+    ax.plot(x,td_z0)
+    ax.set(yscale='log')
+    plt.show()
+    return None
+
+def wppy_tg(): 
+    model=read_prodimo()
+    x=np.reshape(model.x[:,0],model.x.shape[0])
+    tg_z0=np.reshape(model.tg[:,0],model.tg.shape[0])
+
+
+    ''' Plot '''
+    fig,ax=plt.subplots(1,1)
+    ax.plot(x,tg_z0)
+    ax.set(yscale='log')
+    plt.show()
+    return None
+
+    
+def wppy_line_origin():
+    model=read_prodimo()
+    
+
+    
+    
+    
+
+
+def wppy_A1():
+    model=read_prodimo()
+    A_list=model.dust.asize
+    plt.plot(A_list,'+')
+    plt.yscale("log")
+    plt.show()
+    #print(A_list)
+    return A_list
