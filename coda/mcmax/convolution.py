@@ -1,41 +1,69 @@
 from coda.mcmax.header import *
 
-def convolve_image(data):
+def convolve_model(data,fov,npix,beam_x,beam_y,PA_beam):
 
-    # Start convolution
-    pxsize=4.0 # mas/px
-    beam_x=74.0 # mas
-    beam_y=57.0 # mas
+    ############################################################
+    #
+    # data: MCMax3D output matrix.
+    # fov: the value declared in Image.out. In arcsec.
+    # npix: the value declared in Image.out.
+    # beam_x: beam width (FWHM) along the major axis in arcsec.
+    # beam_y: beam width (FWHM) along the minor axis in arcsec.
+    # PA: beam orientation respect to north (direction east)
+    # in deg.
+    #
+    ############################################################
 
-    beam_x=beam_x/pxsize # px
-    beam_y=beam_y/pxsize # px
+    pxsize=(fov/npix) # Pixel scale: arcsec/px.
 
-    PA=63.0
-    angle=0.0#((PA+90.0)*units.deg).to(units.rad).value
+    # Convert beam sizes to pixels
+    theta_maj=beam_x/pxsize # px
+    theta_min=beam_y/pxsize # px
 
-    kernel=Gaussian2DKernel(x_stddev=beam_x,y_stddev=beam_y,theta=angle)
+    # Beam orientation
+    angle=((90.0+PA_beam)*units.deg).to(units.rad).value
+
+    # Standard deviations
+    sigma_maj=theta_maj/2.3548 # px
+    sigma_min=theta_min/2.3548 # px
+
+    # Set up kernel
+    kernel=Gaussian2DKernel(x_stddev=sigma_maj,y_stddev=sigma_min,theta=angle)
+
+    print("Hi! I'm convolving your model...")
+    convolved_data=convolve(data,kernel)
+
+    return convolved_data # mJy/arcsec^2
+
+
+def convolve_observation(data,pxsize,beam_x,beam_y,PA_beam):
+
+    ############################################################
+    #
+    # data: matrix to convolve.
+    # pxsize: pixel scale in arcsec/px.
+    # beam_x: beam width (FWHM) along the major axis in arcsec.
+    # beam_y: beam width (FWHM) along the minor axis in arcsec.
+    # PA: beam orientation respect to north (direction east)
+    # in deg.
+    #
+    ############################################################
+
+    # Convert beam sizes to pixels
+    theta_maj=beam_x/pxsize # px
+    theta_min=beam_y/pxsize # px
+
+    # Beam orientation
+    angle=((90.0+PA_beam)*units.deg).to(units.rad).value
+
+    # Standard deviations
+    sigma_maj=theta_maj/2.3548 # px
+    sigma_min=theta_min/2.3548 # px
+
+    # Set up kernel
+    kernel=Gaussian2DKernel(x_stddev=sigma_maj,y_stddev=sigma_min,theta=angle)
+
+    print("Hi, I'm convolving your observation...")
     convolved_data=convolve(data,kernel)
 
     return convolved_data
-
-def convolve_image_jband(data):
-
-    # Start convolution
-    pxsize=12.26 # mas/px
-    beam_x=24.5 # (mas) 50% of the image resolution in px
-    beam_y=beam_x # mas
-
-    beam_x=beam_x/pxsize
-    beam_y=beam_y/pxsize
-
-    #beam_x=beam_x/pxsize # px
-    #beam_y=beam_y/pxsize # px
-
-    PA=63.0
-    angle=1.94
-
-    kernel=Gaussian2DKernel(x_stddev=beam_x,y_stddev=beam_y,theta=angle)
-    convolved_data=convolve(data,kernel)
-
-    return convolved_data
-
