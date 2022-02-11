@@ -142,8 +142,7 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
 
     default('immath')
 
-    #model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    #line='001'
+    # Define the variable 'cube'
     cube=model+"/LINE_3D_"+lineID+".fits.conv.line.mom0"
 
     # Rest frequency in GhZ
