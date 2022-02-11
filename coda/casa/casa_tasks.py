@@ -1,7 +1,22 @@
 """
-Python script for processing disk models using CASA.
 
-This script assumes a full-installation of CASA is available.
+Python script for processing ProDiMo models using CASA.
+--------------------------------------------------------------------------------
+This script assumes a full-installation of CASA and it has only been tested with
+CASA version 6.4.
+
+How to use this module?
+--------------------------------------------------------------------------------
+There are several methods that can be used independently. For a flawless
+procedure however, it is adviced to run the whole set of routines in the
+following order:
+
+    - convolve()
+    - subtract_continuum()
+    - create_moments()
+    - convert_units()
+    - convert_to_fits()
+
 """
 
 import sys
@@ -101,35 +116,50 @@ def create_moments():
     moments=[0],
     outfile=cube+".mom0")
 
-
     return None
 
-def convert_units():
+
+def convert_units(model,lineID,nu0,bmaj,bmin):
+
     """
+
     Convert line cube units from Jy beam^-1 Km s^-1 to
     K Km s^-1.
 
     Parameters
     ----------
+    model:  path to the ProDiMo model directory [str]
+    lineID: identificator of the emission line fits file produced by ProDiMo [str]
+    nu0:    rest frequency of the emission line [Hz]
+    bmaj:   the beam's major axis [arcsec]
+    bmin:   the beam's minor axis [arcsec]
+
+    Output
+    ------
+    A CASA image for the integrated line emission in K*km/s
+
     """
 
     default('immath')
 
-    model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    line='001'
-    cube=model+"/LINE_3D_"+line+".fits.conv.line.mom0"
+    #model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
+    #line='001'
+    cube=model+"/LINE_3D_"+lineID+".fits.conv.line.mom0"
 
-    # ---> We need the beam in units of arcseconds. This is very restrictive
-    # since the immath task doesn't seem to allow variables, therefore
-    # user will have to change the code whenever they have to work with
-    # different beam properties. Is there a way to circumvent this within
-    # CASA? Is it better to use Astropy? (!)
+    # Rest frequency in GhZ
+    nu0=nu0/1e9
+
+    # Rest frequency squared
+    nu0_pow_2=nu0**2
+
+    # From intensity to brightness temperature. The method is also used here:
+    # https://casaguides.nrao.edu/index.php/VLA_CASA_Imaging-CASA5.0.0#Image_Conversion
     immath(imagename=cube,
     mode='evalexpr',
-    expr='1.222e6*IM0/230.537939^2/(0.37*0.33)',
+    expr=('1.222e6*IM0/%s/(%s*%s)'%(nu0_pow_2,bmaj,bmin)),
     outfile=cube+'.Tb')
 
-    # Changing unit in header
+    # Change unit in header
     imhead(imagename=cube+'.Tb',
     mode='put',
     hdkey='bunit',
@@ -137,13 +167,17 @@ def convert_units():
 
     return None
 
+
 def convert_to_fits():
+
     """
+
     Convert a .Tb CASA image to fits format to
     be analyzed with GoFish
 
     Parameters
     ----------
+
     """
 
     default('exportfits')
@@ -160,7 +194,16 @@ def convert_to_fits():
     return None
 
 #convolve()
+
 #subtract_continuum()
+
 #create_moments()
-#convert_units() # ---> IS THE BEAM INFORMATION OK? (!)
-convert_to_fits()
+
+
+convert_units('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
+'001',
+2.30537939e11,
+0.37,
+0.33)
+
+#convert_to_fits()
