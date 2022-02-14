@@ -19,65 +19,87 @@ following order:
 
 """
 
+
 import sys
 
-def convolve():
+
+def convolve(model,lineID,bmaj,bmin,pa):
+
     """
-    Convolve a data cube with a simple beam
+
+    Convolve a data cube with a beam
 
     Parameters
     ----------
-    model   : path to the model - argv[1]
-        The directory where the model resides.
-    line    : line identifier - argv[2]
-        The line identifier for in the ProDiMo standard
+    model   : path to the ProDiMo model directory (str)
+    lineID  : identificator of the emission line fits file produced by ProDiMo (str)
+    bmaj    : the beam's major axis [arcsec] (float)
+    bmin    : the beam's minor axis [arcsec] (float)
+    pa      : the position angle of the beam [deg] (float)
+
+    Output
+    ------
+    A CASA image with the convolved data cube.
+
     """
 
-    # Define variables
-    #model=sys.argv[1]
-    #line=sys.argv[2]
-    model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    line='001'
-    cube=model+"/LINE_3D_"+line+".fits"
+    # Printing info
+    print("\n Convolving the model... \n")
 
-    # Import fits image and convert to CASA format
-    #importfits(fitsimage=cube,imagename="LINE_3D_"+line+".im",overwrite=True)
+    # Define the variable 'cube'
+    cube=model+"/LINE_3D_"+lineID+".fits"
 
     # Convolution
-    #beam=["5.833333333333333e-05deg","4.9999999999999996e-05deg","73.1deg"]
-    beam=["1.0278e-04deg","9.1666e-05deg","67.1deg"] # ---> Can this be in arcsec? (!)
-    #ia=iatool()
-    #ia.open(infile=cube) # Attaching image analysis tool to the specified cube
-    #ia.close()
-    ia.fromfits(infile=cube) # Converting fits image to CASA format.
-    #imconv=ia.convolve2d(outfile="LINE_3D_"+line+".fits.conv",
-    imconv=ia.convolve2d(outfile=cube+".conv",
-    major=beam[0],minor=beam[1],pa=beam[2],
-    overwrite=True)
+    bmaj=str(bmaj)+"arcsec"
+    bmin=str(bmin)+"arcsec"
+    pa=str(pa)+"deg"
 
+    # Converting fits image to CASA format.
+    ia.fromfits(infile=cube)
+
+    # Convolving image with beam
+    imconv=ia.convolve2d(outfile=cube+".conv",
+            major=bmaj,minor=bmin,pa=pa,
+            overwrite=True)
+
+    # Detaching tool from image
     imconv.done()
     ia.done()
+
     return None
 
-def subtract_continuum():
+
+def subtract_continuum(model,lineID):
+
     """
-    Subtract the continuum from a convolved data cube
+
+    Subtract the continuum emission from a convolved data cube.
 
     Parameters
     ----------
+    model   : path to the ProDiMo model directory (str)
+    lineID  : identificator of the emission line fits file produced by ProDiMo (str)
+
+    Output
+    ------
+    Two CASA images with the continuum flux and a CASA image with the line flux.
+    Both are data cubes with the same dimension; the cube for the continuum
+    stores the same information in all the channels.
 
     """
+
+    # Printing info
+    print("\n Subtracting the continuum... \n")
 
     default('imcontsub')
 
-    model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    line='001'
-    cube=model+"/LINE_3D_"+line+".fits.conv"
+    # Define 'cube' variable
+    cube=model+"/LINE_3D_"+lineID+".fits.conv"
 
-    # Get number of channels from convolved image
+    # Get total number of channels from convolved image
     Nchans=imhead(cube,mode='get',hdkey='shape')[2]
 
-    # Define fraction of channels assumed to be line-free
+    # Define fraction of channels from the total assumed to be line-free
     Fchansfree=3
 
     # Determine range of line-free channels
@@ -85,9 +107,12 @@ def subtract_continuum():
     nrange=max([1,int(Nchans/Fchansfree)])
     Rchans="0~"+str(nrange-1)+","+str(Nchans-nrange)+"~"+str(Nchans-1)
 
-    # ----> Removing file if exists (!)
+    # Remove file if exists
+    # ---> Raise a warning. Maybe Try and except? (!)
+    os.system("rm -rf "+cube+".line")
+    os.system("rm -rf "+cube+".cont")
 
-    # Subtracting continuum using imcontsub task
+    # Subtract continuum using 'imcontsub' task
     imcontsub(imagename=cube,
     linefile=cube+".line",
     contfile=cube+".cont",
@@ -96,22 +121,37 @@ def subtract_continuum():
 
     return None
 
-def create_moments():
+
+def create_moments(model,lineID):
+
     """
-    Create moment maps from a convolved and continuum subtracted
-    data cube.
+    Create moment maps from a convolved and continuum-subtracted
+    data cube for the line emission.
 
     Parameters
     ----------
+    model   : path to the ProDiMo model directory (str)
+    lineID  : identificator of the emission line fits file produced by ProDiMo (str)
+
+    Output
+    ------
+    A CASA image with the moment cero of the data set.
+
     """
+
+    # Printing info
+    print("\n Collapsing the cube and creating moments... \n")
 
     default('immoments')
 
-    model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    line='001'
-    cube=model+"/LINE_3D_"+line+".fits.conv.line"
+    # Define variable 'cube'
+    cube=model+"/LINE_3D_"+lineID+".fits.conv.line"
 
-    # Computing first moment of the convolved line cube
+    # Remove file if exists
+    # ---> Raise a warning. Maybe Try and except? (!)
+    os.system("rm -rf "+cube+".mom0")
+
+    # Computing moment cero map of the convolved line cube
     immoments(imagename=cube,
     moments=[0],
     outfile=cube+".mom0")
@@ -128,17 +168,20 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
 
     Parameters
     ----------
-    model:  path to the ProDiMo model directory [str]
-    lineID: identificator of the emission line fits file produced by ProDiMo [str]
-    nu0:    rest frequency of the emission line [Hz]
-    bmaj:   the beam's major axis [arcsec]
-    bmin:   the beam's minor axis [arcsec]
+    model   : path to the ProDiMo model directory [str]
+    lineID  : identificator of the emission line fits file produced by ProDiMo [str]
+    nu0     : rest frequency of the emission line [Hz] (float)
+    bmaj    : the beam's major axis [arcsec] (float)
+    bmin    : the beam's minor axis [arcsec] (float)
 
     Output
     ------
-    A CASA image for the integrated line emission in K*km/s
+    A CASA image for the integrated line emission in units of K*km/s
 
     """
+
+    # Printing info
+    print("\n Converting units... \n")
 
     default('immath')
 
@@ -151,7 +194,11 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     # Rest frequency squared
     nu0_pow_2=nu0**2
 
-    # From intensity to brightness temperature. The method is also used here:
+    # Remove file if exists
+    # ---> Raise a warning. Maybe Try and except? (!)
+    os.system("rm -rf "+cube+".Tb")
+
+    # From intensity to brightness temperature. This method is used here:
     # https://casaguides.nrao.edu/index.php/VLA_CASA_Imaging-CASA5.0.0#Image_Conversion
     immath(imagename=cube,
     mode='evalexpr',
@@ -167,23 +214,26 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     return None
 
 
-def convert_to_fits():
+def convert_to_fits(model,lineID):
 
     """
 
-    Convert a .Tb CASA image to fits format to
-    be analyzed with GoFish
+    Convert a .Tb CASA image to fits format in order to be analyzed with GoFish
 
     Parameters
     ----------
+    model   : path to the ProDiMo model directory [str]
+    lineID  : identificator of the emission line fits file produced by ProDiMo [str]
 
     """
 
+    # Printing info
+    print("\n Converting final product to fits format... \n")
+
     default('exportfits')
 
-    model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-    line='001'
-    cube=model+"/LINE_3D_"+line+".fits.conv.line.mom0.Tb"
+    # Define the 'cube' variable
+    cube=model+"/LINE_3D_"+lineID+".fits.conv.line.mom0.Tb"
 
     # Convert CASA image into a fits image
     exportfits(imagename=cube,
@@ -192,11 +242,23 @@ def convert_to_fits():
 
     return None
 
-#convolve()
 
-#subtract_continuum()
+################################################################################
+# Running the pipeline
 
-#create_moments()
+convolve('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
+'001',
+0.37,
+0.33,
+67.1)
+
+
+subtract_continuum('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
+'001')
+
+
+create_moments('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
+'001')
 
 
 convert_units('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
@@ -205,4 +267,6 @@ convert_units('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
 0.37,
 0.33)
 
-#convert_to_fits()
+
+convert_to_fits('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
+'001')
