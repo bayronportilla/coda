@@ -246,27 +246,15 @@ def convert_to_fits(model,lineID):
 ################################################################################
 # Running the pipeline
 
-convolve('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
-'001',
-0.37,
-0.33,
-67.1)
+model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
+lineID='003'
+bmaj=0.21
+bmin=0.18
+pa=73.1
+nu0=3.56734276e11
 
-
-subtract_continuum('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
-'001')
-
-
-create_moments('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
-'001')
-
-
-convert_units('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
-'001',
-2.30537939e11,
-0.37,
-0.33)
-
-
-convert_to_fits('/Users/bportilla/Documents/project2/ProDiMo_models/run07',
-'001')
+convolve(model,lineID,bmaj,bmin,pa)
+subtract_continuum(model,lineID)
+create_moments(model,lineID)
+convert_units(model,lineID,nu0,bmaj,bmin)
+convert_to_fits(model,lineID)
