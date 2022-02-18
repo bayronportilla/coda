@@ -9,7 +9,7 @@ This module is largely based on the Gofish package by Richard Teague.
 
 def get_profile(image,dist,pa,inc,aperture,
                 visual=None,write=None,fov=None,bunit=None,
-                pxscale=None):
+                pxscale=None,ebar=None):
 
     """
 
@@ -62,7 +62,10 @@ def get_profile(image,dist,pa,inc,aperture,
         ax1.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
         cube.plot_mask(ax=ax1,PA_min=PAmin,PA_max=PAmax,
                         inc=inc,PA=pa,mask_frame='disk',r_max=1.5)
-        ax2.errorbar(xm,ym,dym)
+        if ebar is True:
+            ax2.errorbar(xm,ym,dym)
+        if ebar is None:
+            ax2.plot(xm,ym)
         ax2.set(xlabel="r (arcsec)",ylabel="Intensity/flux density")
         plt.show()
 
