@@ -8,9 +8,10 @@ CASA version 6.4.
 How to use this module?
 --------------------------------------------------------------------------------
 There are several methods that can be used independently. For a flawless
-procedure however, it is adviced to run the whole set of routines in the
-following order:
+run however, it is adviced to run the whole set of routines in the following
+order:
 
+    - rotate()
     - convolve()
     - subtract_continuum()
     - create_moments()
@@ -19,8 +20,51 @@ following order:
 
 """
 
-
 import sys
+
+def rotate(model,lineID,angle):
+
+    """
+
+    Rotates a cube by an angle measured east-from-north. Note that this
+    operation first rotates the two direction axes of an cube and then, the
+    input image is regridded to the rotated coordinate system. Therefore, an
+    internal interpolation of the data takes place. If the image brightness
+    units are Jy/pixel, the output is scaled to conserve flux.
+
+    Parameters
+    ----------
+    model   : path to the ProDiMo model directory (str)
+    lineID  : identificator of the emission line fits file produced by ProDiMo (str)
+    angle   : the amount the two axes of the image will be rotated by. This angle
+            is reckoned east-of-north [deg] (float).
+
+    Output
+    ------
+    A CASA image with the rotated data cube.
+
+    """
+
+    # Printing info
+    print("\n Rotating the model... \n")
+
+    # Define the variables 'cube' and 'angle'
+    cube=model+"/LINE_3D_"+lineID+".fits"
+    angle=str(angle)+"deg"
+
+    # Converting fits image to CASA format
+    ia.fromfits(infile=cube)
+
+    # Rotating image
+    imrot=ia.rotate(outfile=cube+".rot",
+            pa=angle,
+            overwrite=True)
+
+    # Detaching tool from image
+    imrot.done()
+    ia.done()
+
+    return None
 
 
 def convolve(model,lineID,bmaj,bmin,pa):
@@ -47,15 +91,15 @@ def convolve(model,lineID,bmaj,bmin,pa):
     print("\n Convolving the model... \n")
 
     # Define the variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits"
+    cube=model+"/LINE_3D_"+lineID+".fits.rot"
 
     # Convolution
     bmaj=str(bmaj)+"arcsec"
     bmin=str(bmin)+"arcsec"
     pa=str(pa)+"deg"
 
-    # Converting fits image to CASA format.
-    ia.fromfits(infile=cube)
+    # Attach the Image Analysis tool to the specified image.
+    ia.open(cube)
 
     # Convolving image with beam
     imconv=ia.convolve2d(outfile=cube+".conv",
@@ -94,7 +138,7 @@ def subtract_continuum(model,lineID):
     default('imcontsub')
 
     # Define 'cube' variable
-    cube=model+"/LINE_3D_"+lineID+".fits.conv"
+    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv"
 
     # Get total number of channels from convolved image
     Nchans=imhead(cube,mode='get',hdkey='shape')[2]
@@ -145,7 +189,7 @@ def create_moments(model,lineID):
     default('immoments')
 
     # Define variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits.conv.line"
+    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line"
 
     # Remove file if exists
     # ---> Raise a warning. Maybe Try and except? (!)
@@ -186,7 +230,7 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     default('immath')
 
     # Define the variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits.conv.line.mom0"
+    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line.mom0"
 
     # Rest frequency in GhZ
     nu0=nu0/1e9
@@ -233,7 +277,7 @@ def convert_to_fits(model,lineID):
     default('exportfits')
 
     # Define the 'cube' variable
-    cube=model+"/LINE_3D_"+lineID+".fits.conv.line.mom0.Tb"
+    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line.mom0.Tb"
 
     # Convert CASA image into a fits image
     exportfits(imagename=cube,
@@ -248,11 +292,13 @@ def convert_to_fits(model,lineID):
 
 model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
 lineID='003'
+angle=70.4
 bmaj=0.21
 bmin=0.18
 pa=73.1
 nu0=3.56734276e11
 
+rotate(model,lineID,angle)
 convolve(model,lineID,bmaj,bmin,pa)
 subtract_continuum(model,lineID)
 create_moments(model,lineID)
