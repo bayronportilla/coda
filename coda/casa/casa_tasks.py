@@ -58,7 +58,6 @@ def rotate(model,lineID,angle):
     # Rotating image
     imrot=ia.rotate(outfile=cube+".rot",
             pa=angle,
-            replicate=False,
             overwrite=True)
 
     # Detaching tool from image
