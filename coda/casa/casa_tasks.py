@@ -289,10 +289,10 @@ def convert_to_fits(model,lineID):
 
 ################################################################################
 # Running the pipeline
-
 model='/Users/bportilla/Documents/project2/ProDiMo_models/run07'
-lineID='003'
 angle=70.4
+
+lineID='003'
 bmaj=0.21
 bmin=0.18
 pa=73.1
