@@ -134,25 +134,28 @@ def density_profile(Rin,Rout,Mdust,
 
 
 def convert_comp(fc,porosity,qtype) :
+
     '''
+
     Convert grain composition from the MCMax3D standard to the ProDiMo standard
     and vice-versa.
 
     Parameters
     ----------
-        fc: fraction of carbon.
+    fc: fraction of carbon.
 
-        porosity: the fraction of vaccum the grain is made of. If the amount of
+    porosity: the fraction of vaccum the grain is made of. If the amount of
         vacuum is say 10%, then you must enter porosity=0.1.
 
-        qtype: The type of the input quantities. It can be either 'mcmax' or
+    qtype: The type of the input quantities. It can be either 'mcmax' or
         'prodimo'. If qtype='mcmax', then the routine will return the correspondent
         ProDiMo quantities. If qtype='prodimo', then the routine will return the
         correspondent MCMax3D quantities.
+
     '''
 
-    ''' Bulk constants. Do not touch them unless the hard-coded quantities in
-    MCMax3D have changed. '''
+    #Bulk constants. Do not touch them unless the hard-coded quantities in
+    #MCMax3D have changed.
     rho_c=1.8   # g cm^-2
     rho_si=3.01 # g cm^-2
 
@@ -194,17 +197,30 @@ def convert_comp(fc,porosity,qtype) :
 
 
 def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
+
     '''
-    Convert a standard MCMax3D surface density profile
-    into a ProDiMo 1D input sdfile. As an argument, it receives
-    an object of the class File with the following
-    characteristics:
+
+    Convert a standard MCMax3D surface density profile into a ProDiMo 1D input
+    sdfile. As an argument, it receives an object of the class File with the
+    following characteristics:
 
     - fobj.x in au
     - fobj.y in g cm^-2
 
-    The length of the r_array will determine the
-    resolution of the ProDiMo model. Choose it wisely!
+    Caution!
+    --------
+    *   The length of the r_array will determine the resolution of the ProDiMo
+        model. Choose it wisely!
+
+    *   This routine only works when the MCMax3D model has only one type of
+        particle i.e. when there is only one keyword of the type 'computepartXX'
+        in the input.dat file.
+
+    *   When using this routine, I assume you have already ran a 'stop-after-init'
+        ProDiMo simulation. This way you have a grid where MCMax3D quntities will
+        be interpolated to.
+
+
     '''
 
     @dataclass
@@ -222,19 +238,46 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
             value=self.r**2*np.sin(self.theta)*self.dr*self.dtheta*self.dphi
             return value
 
+
         def dz(self):
             # Units: cm
             value=self.r*self.dtheta
             return value
 
+
         def zsphere(self):
-            # Units: cm
+
+            '''
+
+            Finds the projection of the radial spherical coordinate onto the
+            vertical axes.
+
+            Output
+            ------
+            Projected radius in cm.
+
+            '''
+
             value=self.r*np.cos(self.theta)
+
             return value
 
+
         def rsphere(self):
-            ### Units: cm
+
+            '''
+
+            Finds the projection of the radial spherical coordinate onto the
+            midplane
+
+            Output
+            ------
+            Projected radius in cm.
+
+            '''
+
             value=self.r*np.sin(self.theta)
+
             return value
 
     @dataclass
@@ -244,7 +287,6 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
         dz:float
         comp:float
 
-
     print("Retrieving the exact MCMax3D profile")
     model='/data/users/bportilla/runs_P1/final_runs/recalibration_ppd/run130/'
     #model='/data/users/bportilla/runs_P1/final_runs/recalibration_ppd/run128/'
@@ -253,29 +295,28 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
     ai_array=psize[:,0] # microns
 
     def func_fsize(zoneID):
-        ''' Working with zones'''
-        ### Import data
+        # Import data from zones
         hdu_1=fits.open(model+"output/Zone000%d.fits.gz"%(zoneID))
 
-        ### Composition matrix
+        # Mass density matrix (g cm^-3)
         ### C[3]:pmid(rad), C[4]:tmid(rad), C[5]:rmid(au)
-        C=hdu_1[6].data                   # g cm^-3
+        C=hdu_1[6].data
 
-        ### Center coordinates
+        # Coordinates at cell center
         rmidAU=hdu_1[0].data[0,0,0,:]
         rmid=(rmidAU*u.au).to(u.cm).value # cm
         tmid=hdu_1[0].data[1,0,:,0]       # rad
         pmid=hdu_1[0].data[2,:,0,0]       # rad
 
-        ### Borders
+        # Coordinates at cell border
         rlim=hdu_1[1].data   # cm
         tlim=hdu_1[2].data   # rad
         plim=hdu_1[3].data   # rad
 
-        ### Declare matrix needed for interpolation
+        # Declare matrix required for interpolation
         MGP=np.empty((int(len(tmid)*0.5),len(rmid)),dtype='object')
 
-        ### The big loop
+        # The big loop
         for i in range(C.shape[5]):             # Along r
             dr=rlim[i+1]-rlim[i]
             for j in range(C.shape[4]):         # Along theta
@@ -289,42 +330,44 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
 
         return rmidAU,MGP
 
-    ### Concatenate fsizes and rmidAU
+    # Concatenate fsizes and rmidAU
     rmidAU_1,MGP_1=func_fsize(1)[0],func_fsize(1)[1]
     rmidAU_2,MGP_2=func_fsize(2)[0],func_fsize(2)[1]
     MGP=np.concatenate((MGP_1,MGP_2),axis=1)
     r_array=np.concatenate((rmidAU_1,rmidAU_2))
 
-    ''' Interpolate density profile '''
+    #Interpolate density profile
     x_array=fobj.x
     y_array=fobj.y
     cs=CubicSpline(x_array,y_array)
     S_array=np.array([cs(i) for i in r_array])
 
-    ''' Declare gas-to-dust ratio '''
+    # Declare gas-to-dust ratio
     g2d=100.0
     g2d_array=g2d*np.ones(len(S_array))
 
-    ### Declaring and filling in C matrix for MCMax3D. It only stores
-    ### the density.
+    # Declaring and filling in C matrix for MCMax3D. It only stores the mass
+    # density per grain size, i.e. there is one Ntheta/2 x Nradius matrix per
+    # grain size
     C_mcmax=np.zeros((psize.shape[0],MGP.shape[0],MGP.shape[1]))
     for k in range(C_mcmax.shape[0]):           # Over grain size
         for i in range(C_mcmax.shape[1]):       # Over theta
             for j in range(C_mcmax.shape[2]):   # Over radius
                 C_mcmax[k,i,j]=MGP[i,j].comp[k]
 
-    ### Read ProDiMo grid
+    # Read ProDiMo grid. This steps requires prodimopy!
     model=read_prodimo()
     r_array_p=np.reshape(model.x[:,0:1],model.x.shape[0])   # au
     z_matrix=model.z                                        # au, dim:len(r)*len(z)
 
-    ### Declaring and filling in C matrix for ProDiMo. Composition is
-    ### initialised to None.
+    # Declaring and filling in C matrix for ProDiMo. Note that composition is
+    # initialized to None.
     C_prodimo=np.empty((psize.shape[0],z_matrix.shape[1],z_matrix.shape[0]),
                         dtype='object')
     for k in range(C_prodimo.shape[0]):             # Over grain size
         for i in range(C_prodimo.shape[1]):         # Over z
             for j in range(C_prodimo.shape[2]):     # Over radius
+                # FIX ME! Following conditional is just a workaround ---> (!)
                 if i<C_prodimo.shape[1]-1:
                     dz=((z_matrix[j,i+1]-z_matrix[j,i])*u.au).to(u.cm).value
                 else:
@@ -332,8 +375,7 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
                 GP_prodimo=GridPointProdimo(r_array_p[j],z_matrix[j,i],dz,None)
                 C_prodimo[k,i,j]=GP_prodimo
 
-    ''' Start 2D interpolation '''
-    ### Sampling MCMax3D info into 1D arrays.
+    # Start 2D interpolation. Sampling MCMax3D info into 1D arrays.
     for k in range(psize.shape[0]):
         rsph_array=[]
         zsph_array=[]
@@ -342,21 +384,21 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
             for i in range(MGP.shape[0]):                       # Over theta
                 rsph_array.append((MGP[i,j].rsphere()*u.cm).to(u.au).value)
                 zsph_array.append((MGP[i,j].zsphere()*u.cm).to(u.au).value)
-                csph_array.append(np.log10(C_mcmax[k,i,j]))     # Note we store the
-                                                                # log10 of the density
+                # Note that we store the log10 of the density
+                csph_array.append(np.log10(C_mcmax[k,i,j]))
 
-        ### Uncomment the preferred interpolator. Rbf seems to work nicely.
+        # Uncomment the preferred interpolator. Rbf seems to work nicely.
         #f=interp2d(rsph_array,zsph_array,csph_array,kind='linear',bounds_error=False)
         f=Rbf(rsph_array,zsph_array,csph_array,function='linear')
 
-        ### Interpolate densities into ProDiMo grid
+        # Interpolate logarithm of densities into ProDiMo grid
         for i in range(C_prodimo.shape[1]):                 # Over z
             for j in range(C_prodimo.shape[2]):             # Over radius
                 rprodimo=C_prodimo[k,i,j].r                 # au
                 zprodimo=C_prodimo[k,i,j].z                 # au
                 C_prodimo[k,i,j].comp=f(rprodimo,zprodimo)  # g cm^-3
 
-    ''' Declaring fsize matrix '''
+    # Declaring fsize matrix
     """
     fsize=np.zeros((C_prodimo.shape[0],C_prodimo.shape[2]))
     for k in range(C_prodimo.shape[0]):          # Over composition
@@ -374,6 +416,7 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
             for i in range(C_prodimo.shape[1]):  # Over height
                 rho_val=10**float(C_prodimo[k,i,j].comp)
                 S_val+=rho_val*C_prodimo[k,i,j].dz
+            # Multiply by 2 to account for cells below the midplane
             fsize[k,j]=2*S_val
 
     if visual:
@@ -389,6 +432,7 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
                     ax1.plot(r_array,fsize[i])
 
         density_reconstructed=np.zeros(fsize.shape[1])
+
         for j in range(fsize.shape[1]):
             density_reconstructed[j]=np.sum(np.reshape(fsize[:,j:j+1],fsize.shape[0]))
 
