@@ -250,6 +250,13 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
     *   Rin and Rout must be equal to 0.04 au and 130 au respectively.
 
+    *   The number of radial points of the ProDiMo grid must be equal to that in
+        the MCMax3D model.
+
+    Parameters
+    ----------
+    model:  path to the MCMax3D model directory (str)
+
     Example
     -------
     1. Run a stop_after_init ProDiMo model to create a cylindrical grid if needed.
@@ -489,7 +496,7 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                                     np.ones(psize.shape[0]))
             M_pgc_full[i,j]=GP_prodimo
 
-
+    
     for i in range(M_pgc_full.shape[0]-1):
         for j in range(M_pgc_full.shape[1]):
             M_pgc_full[i,j].r=(M_mgc_full[-1,j].r*u.cm).to(u.au).value
