@@ -489,12 +489,11 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                                     np.ones(psize.shape[0]))
             M_pgc_full[i,j]=GP_prodimo
 
-
+    
     for i in range(M_pgc_full.shape[0]-1):
         for j in range(M_pgc_full.shape[1]):
             M_pgc_full[i,j].r=(M_mgc_full[-1,j].r*u.cm).to(u.au).value
-            #ff.write("%.15f\n"%((M_mgc_full[-1,j].r*u.cm).to(u.au).value/(M_mgc_full[i,j].r*u.cm).to(u.au).value))
-
+            
 
     '''
     for j in range(M_pgc_full.shape[1]):
