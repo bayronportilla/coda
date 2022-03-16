@@ -214,6 +214,20 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
     Convert a standard MCMax3D grid density output into a 1D input sdfile for
     ProDiMo.
 
+                        r
+                     ------>
+                    |       ^
+    M_mgc =  theta  |       | z
+                    v       |
+                     -------
+
+                        r
+                     ------>
+                    |       ^
+    M_pgc =      z  |       | theta
+                    v       |
+                     -------
+
     Caution!
     --------
     *   The length of the r_array will determine the resolution of the ProDiMo
@@ -234,6 +248,8 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
     *   MCMax3D model must have exclussively two zones; no one, no three...
 
+    *   Rin and Rout must be equal to 0.04 au and 130 au respectively.
+
     Example
     -------
     1. Run a stop_after_init ProDiMo model to create a cylindrical grid if needed.
@@ -242,8 +258,8 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
     >>> nano Parameter.in
     >>> prodimo
 
-    2. In the directory of the ProDiMo model, open an ipython session and import the
-    modules
+    2. In the directory of the ProDiMo model, open an ipython session and import
+    the modules
     >>> ipython
     >>> from coda.mcmax import input
 
@@ -356,7 +372,7 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
         hdu_1=fits.open(model+"/output/Zone000%d.fits.gz"%(zoneID))
 
         # Mass density matrix (g cm^-3)
-        # C[3]:pmid(rad), C[4]:tmid(rad), C[5]:rmid(au)
+        # Remember that C[3]=pmid(rad), C[4]=tmid(rad), C[5]=rmid(au)
         C=hdu_1[6].data
 
         # Coordinates at cell center
@@ -437,7 +453,6 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
         return rmidAU,M_mgc
 
-
     # Concatenate fsizes and rmidAU
     rmidAU_1,M_mgc_1=func_fsize(1)[0],func_fsize(1)[1]
     rmidAU_2,M_mgc_2=func_fsize(2)[0],func_fsize(2)[1]
@@ -452,7 +467,7 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
     # Read ProDiMo grid. This steps requires prodimopy!
     model_prodimo=read_prodimo()
     r_array_p=np.reshape(model_prodimo.x[:,0:1],model_prodimo.x.shape[0])   # au
-    z_matrix=model_prodimo.z                                        # au, dim:len(r)*len(z)
+    z_matrix=model_prodimo.z                             # au, dim:len(r)*len(z)
 
     # Declaring and filling in the C matrix (composition matrix) for MCMax3D.
     # It only stores the mass density per grain size, i.e. there is one Ntheta/2 x Nradius matrix per
