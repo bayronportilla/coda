@@ -76,7 +76,18 @@ class File:
 
 
 def get_size_distribution(model):
-    ''' '''
+
+    '''
+
+    Returns an array with the particle's bin sizes of a particle size
+    distribution.
+
+    Caution!
+    --------
+    * This routine only works when a single type of dust grain is present,
+    i.e. when only one computepartXX keyword exists in the input.dat file
+
+    '''
 
     ''' Read file names '''
     filenames=[]
@@ -196,16 +207,12 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
+def convert_density_file(model,visual=None,find_dust_mass=None):
 
     '''
 
-    Convert a standard MCMax3D surface density profile into a ProDiMo 1D input
-    sdfile. As an argument, it receives an object of the class File with the
-    following characteristics:
-
-    - fobj.x in au
-    - fobj.y in g cm^-2
+    Convert a standard MCMax3D grid density output into a 1D input sdfile for
+    ProDiMo.
 
     Caution!
     --------
@@ -220,22 +227,53 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
         ProDiMo simulation. This way you have a grid where MCMax3D quntities will
         be interpolated to.
 
+    *   The density profile inside the folder must be named as:
+        'surface_density_PDS70_70_cropped.dat'
+
+    *   This routine works only with 2D models.
+
+    *   MCMax3D model must have exclussively two zones; no one, no three...
+
+    Example
+    -------
+    1. Run a stop_after_init ProDiMo model to create a cylindrical grid if needed.
+    Remember to run with interface_1D=.false.
+    >>> cd <path-to-ProDiMo-model>
+    >>> nano Parameter.in
+    >>> prodimo
+
+    2. In the directory of the ProDiMo model, open an ipython session and import the
+    modules
+    >>> ipython
+    >>> from coda.mcmax import input
+
+
 
     '''
 
     @dataclass
-    class GridPointMcmax:
-        r:float
+    class CellMcmax:
+        r:float             # cm
         theta:float
         phi:float
-        dr:float
-        dtheta:float
-        dphi:float
+        r_max:float
+        r_min:float
+        theta_max:float
+        theta_min:float
+        phi_max:float
+        phi_min:float
         comp:float
+
 
         def dV(self):
             # Units: cm^3
-            value=self.r**2*np.sin(self.theta)*self.dr*self.dtheta*self.dphi
+
+            dr=self.r_max-self.r_min
+            dtheta=self.theta_max-self.theta_min
+            dphi=self.phi_max-self.phi_min
+
+            value=self.r**2*np.sin(self.theta)*dr*dtheta*dphi
+
             return value
 
 
@@ -258,7 +296,10 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
 
             '''
 
-            value=self.r*np.cos(self.theta)
+            if self.theta==(90*u.deg).to(u.rad).value:
+                value=0.0
+            else:
+                value=self.r*np.cos(self.theta)
 
             return value
 
@@ -276,30 +317,46 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
 
             '''
 
+            #if self.r==(0.04*u.au).to(u.cm).value
             value=self.r*np.sin(self.theta)
 
             return value
 
     @dataclass
-    class GridPointProdimo:
+    class CellProdimo:
         r:float
-        z:float
-        dz:float
+        z_min:float
+        z_max:float
         comp:float
 
-    print("Retrieving the exact MCMax3D profile")
-    model='/data/users/bportilla/runs_P1/final_runs/recalibration_ppd/run130/'
-    #model='/data/users/bportilla/runs_P1/final_runs/recalibration_ppd/run128/'
+        def dz(self):
 
-    ''' Reading particle size array '''
+            '''
+
+            Vertical size of the cylindric cell
+
+            Output
+            ------
+            Vertical size in cm.
+
+            '''
+
+            value=((self.z_max-self.z_min)*u.au).to(u.cm).value
+
+            return value
+
+
+    # Computing psize
+    print("\n Computing psize... \n")
+    psize=get_size_distribution(model)
     ai_array=psize[:,0] # microns
 
     def func_fsize(zoneID):
         # Import data from zones
-        hdu_1=fits.open(model+"output/Zone000%d.fits.gz"%(zoneID))
+        hdu_1=fits.open(model+"/output/Zone000%d.fits.gz"%(zoneID))
 
         # Mass density matrix (g cm^-3)
-        ### C[3]:pmid(rad), C[4]:tmid(rad), C[5]:rmid(au)
+        # C[3]:pmid(rad), C[4]:tmid(rad), C[5]:rmid(au)
         C=hdu_1[6].data
 
         # Coordinates at cell center
@@ -313,130 +370,238 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
         tlim=hdu_1[2].data   # rad
         plim=hdu_1[3].data   # rad
 
+        # Correcting for radius
+        if zoneID==1:
+            rmidAU_min=0.04
+            rmid_min=(rmidAU_min*u.au).to(u.cm).value
+            rmidAU[0]=rmidAU_min
+            rmid[0]=rmid_min
+
+        if zoneID==2:
+            rmidAU_max=130.0
+            rmid_max=(rmidAU_max*u.au).to(u.cm).value
+            rmidAU[-1]=rmidAU_max
+            rmid[-1]=rmid_max
+
+        # Correcting for theta
+        theta_midplane=(90.0*u.deg).to(u.rad).value
+        tmid[int(len(tmid)*0.5-1)]=theta_midplane
+
         # Declare matrix required for interpolation
-        MGP=np.empty((int(len(tmid)*0.5),len(rmid)),dtype='object')
+        # Dim: len(theta)/2 x len(radius)
+        M_mgc=np.empty((int(len(tmid)*0.5),len(rmid)),dtype='object')
 
-        # The big loop
-        for i in range(C.shape[5]):             # Along r
-            dr=rlim[i+1]-rlim[i]
-            for j in range(C.shape[4]):         # Along theta
-                dt=tlim[j+1]-tlim[j]
-                for k in range(C.shape[3]):     # Along phi
-                    dp=plim[k+1]-plim[k]
-                    comp=C[0,:,0,k,j,i] # g cm^-3
-                    GP=GridPointMcmax(rmid[i],tmid[j],pmid[k],dr,dt,dp,comp)
-                    if k==0.0 and j<len(tmid)*0.5:
-                        MGP[j,i]=GP
+        if find_dust_mass is True:
+            # The big loop
+            for i in range(C.shape[5]):             # Along r
+                for j in range(C.shape[4]):         # Along theta
+                    for k in range(C.shape[3]):     # Along phi
+                        comp=C[0,:,0,k,j,i] # g cm^-3
+                        GP=CellMcmax(rmid[i],tmid[j],pmid[k],
+                                    rlim[i+1],rlim[i],
+                                    tlim[j+1],tlim[j],
+                                    plim[k+1],plim[k],
+                                    comp)
+                        if k==0.0 and j<len(tmid)*0.5:
+                            M_mgc[j,i]=GP
+        '''
+        if find_dust_mass is False:
+            # The not-too-big loop
+            for i in range(C.shape[5]):             # Along r
+                for j in range(C.shape[4]):         # Along theta
+                    if j<int(len(tmid)*0.5):
+                        comp=C[0,:,0,0,j,i] # g cm^-3
+                        GP=CellMcmax(rmid[i],tmid[j],pmid[0],
+                                    rlim[i+1],rlim[i],
+                                    tlim[j+1],tlim[j],
+                                    plim[1],plim[0],
+                                    comp)
+                        M_mgc[j,i]=GP
+                    else:
+                        continue
+        '''
+        if find_dust_mass is False:
+            # The not-too-big loop
+            for i in range(C.shape[5]):             # Along r
+                for j in range(C.shape[4]):         # Along theta
+                    if j<int(len(tmid)*0.5):
+                        comp=C[0,:,0,0,j,i] # g cm^-3
+                        GP=CellMcmax(rmid[i],tmid[j],pmid[0],
+                                    rlim[i+1],rlim[i],
+                                    tlim[j+1],tlim[j],
+                                    plim[1],plim[0],
+                                    comp)
+                        M_mgc[j,i]=GP
+                    else:
+                        continue
 
-        return rmidAU,MGP
+        return rmidAU,M_mgc
+
 
     # Concatenate fsizes and rmidAU
-    rmidAU_1,MGP_1=func_fsize(1)[0],func_fsize(1)[1]
-    rmidAU_2,MGP_2=func_fsize(2)[0],func_fsize(2)[1]
-    MGP=np.concatenate((MGP_1,MGP_2),axis=1)
+    rmidAU_1,M_mgc_1=func_fsize(1)[0],func_fsize(1)[1]
+    rmidAU_2,M_mgc_2=func_fsize(2)[0],func_fsize(2)[1]
+    M_mgc_full=np.concatenate((M_mgc_1,M_mgc_2),axis=1)
     r_array=np.concatenate((rmidAU_1,rmidAU_2))
+    """
+    for i in range(M_mgc_full.shape[0]):
+        print("%d %.15e %.5f %.5f"%(i,M_mgc_full[i,-1].comp[39],(M_mgc_full[i,-1].zsphere()*u.cm).to(u.au).value,
+                                    (M_mgc_full[i,-1].r*u.cm).to(u.au).value))
+    """
 
-    #Interpolate density profile
-    x_array=fobj.x
-    y_array=fobj.y
-    cs=CubicSpline(x_array,y_array)
-    S_array=np.array([cs(i) for i in r_array])
+    # Read ProDiMo grid. This steps requires prodimopy!
+    model_prodimo=read_prodimo()
+    r_array_p=np.reshape(model_prodimo.x[:,0:1],model_prodimo.x.shape[0])   # au
+    z_matrix=model_prodimo.z                                        # au, dim:len(r)*len(z)
 
-    # Declare gas-to-dust ratio
-    g2d=100.0
-    g2d_array=g2d*np.ones(len(S_array))
-
-    # Declaring and filling in C matrix for MCMax3D. It only stores the mass
-    # density per grain size, i.e. there is one Ntheta/2 x Nradius matrix per
+    # Declaring and filling in the C matrix (composition matrix) for MCMax3D.
+    # It only stores the mass density per grain size, i.e. there is one Ntheta/2 x Nradius matrix per
     # grain size
-    C_mcmax=np.zeros((psize.shape[0],MGP.shape[0],MGP.shape[1]))
+    '''
+    C_mcmax=np.zeros((psize.shape[0],M_mgc_full.shape[0],M_mgc_full.shape[1]))
     for k in range(C_mcmax.shape[0]):           # Over grain size
         for i in range(C_mcmax.shape[1]):       # Over theta
             for j in range(C_mcmax.shape[2]):   # Over radius
-                C_mcmax[k,i,j]=MGP[i,j].comp[k]
+                C_mcmax[k,i,j]=M_mgc_full[i,j].comp[k]
+    '''
 
-    # Read ProDiMo grid. This steps requires prodimopy!
-    model=read_prodimo()
-    r_array_p=np.reshape(model.x[:,0:1],model.x.shape[0])   # au
-    z_matrix=model.z                                        # au, dim:len(r)*len(z)
+    # Declaring and filling in M_pgc_full matrix for ProDiMo. Note that composition is initialized to array of ones.
+    M_pgc_full=np.empty((z_matrix.shape[1],z_matrix.shape[0]),dtype='object')
+    for i in range(M_pgc_full.shape[0]-1):       # Over z
+        for j in range(M_pgc_full.shape[1]):     # Over radius
+            GP_prodimo=CellProdimo(r_array_p[j],
+                                    z_matrix[j,i],z_matrix[j,i+1],
+                                    np.ones(psize.shape[0]))
+            M_pgc_full[i,j]=GP_prodimo
 
-    # Declaring and filling in C matrix for ProDiMo. Note that composition is
-    # initialized to None.
-    C_prodimo=np.empty((psize.shape[0],z_matrix.shape[1],z_matrix.shape[0]),
-                        dtype='object')
-    for k in range(C_prodimo.shape[0]):             # Over grain size
-        for i in range(C_prodimo.shape[1]):         # Over z
-            for j in range(C_prodimo.shape[2]):     # Over radius
-                # FIX ME! Following conditional is just a workaround ---> (!)
-                if i<C_prodimo.shape[1]-1:
-                    dz=((z_matrix[j,i+1]-z_matrix[j,i])*u.au).to(u.cm).value
-                else:
-                    dz=((z_matrix[j,i]-z_matrix[j,i-1])*u.au).to(u.cm).value
-                GP_prodimo=GridPointProdimo(r_array_p[j],z_matrix[j,i],dz,None)
-                C_prodimo[k,i,j]=GP_prodimo
 
-    # Start 2D interpolation. Sampling MCMax3D info into 1D arrays.
+    for i in range(M_pgc_full.shape[0]-1):
+        for j in range(M_pgc_full.shape[1]):
+            M_pgc_full[i,j].r=(M_mgc_full[-1,j].r*u.cm).to(u.au).value
+            #ff.write("%.15f\n"%((M_mgc_full[-1,j].r*u.cm).to(u.au).value/(M_mgc_full[i,j].r*u.cm).to(u.au).value))
+
+
+    '''
+    for j in range(M_pgc_full.shape[1]):
+        print(M_pgc_full[0,j].r,(M_mgc_full[-1,j].r*u.cm).to(u.au).value)
+    print(M_pgc_full.shape)
+    print(M_mgc_full.shape)
+    '''
+    #sys.exit()
+    # Printing grid's limits
+    # Radial limits MCMax
+    print("\n Following are the coordinates for the cell's center (for MCMax)!!!")
+    print("----------------------------------------------------------")
+    rmin_grid_mcmax=(M_mgc_full[-1,0].r*u.cm).to(u.au).value
+    rmax_grid_mcmax=(M_mgc_full[-1,-1].r*u.cm).to(u.au).value
+
+    # Vertical limits MCMax
+    zmin_grid_mcmax=(M_mgc_full[-1,0].zsphere()*u.cm).to(u.au).value
+    zmax_grid_mcmax=(M_mgc_full[0,-1].zsphere()*u.cm).to(u.au).value
+
+    # Radial limits ProDiMo
+    rmin_grid_prodimo=M_pgc_full[0,0].r
+    rmax_grid_prodimo=M_pgc_full[0,-1].r
+
+    # Vertical limits ProDiMo
+    zmin_grid_prodimo=M_pgc_full[0,0].z_min
+    zmax_grid_prodimo=M_pgc_full[-2,-1].z_max
+
+    if rmin_grid_prodimo<rmin_grid_mcmax:
+        print("\nWarning!")
+        print("r_min_prodimo < r_min_mcmax %.15f and %.15f"%(rmin_grid_prodimo,rmin_grid_mcmax))
+        #print("Correcting...")
+        #M_mgc_full[-1,0].r=(rmin_grid_prodimo*au).to(u.cm).value
+
+    if rmax_grid_prodimo>rmax_grid_mcmax:
+        print("\nWarning!")
+        print("r_max_prodimo > r_max_mcmax %.15f and %.15f"%(rmax_grid_prodimo,rmax_grid_mcmax))
+        #print("Correcting...")
+        #M_mgc_full[-1,-1].r=(rmax_grd_prodimo*au).to(u.cm).value
+
+    if zmin_grid_prodimo<zmin_grid_mcmax:
+        print("\nWarning!")
+        print("z_min_prodimo < z_min_mcmax %.15f and %.15f"%(zmin_grid_prodimo,zmin_grid_mcmax))
+        #print("Correcting...")
+        #M_mgc_full[-1,0].
+
+    if zmax_grid_prodimo>zmax_grid_mcmax:
+        print("\nWarning!")
+        print("z_max_prodimo > z_max_mcmax %.15f and %.15f"%(zmax_grid_prodimo,zmax_grid_mcmax))
+
+    # Do 2D interpolation. Sampling MCMax3D info into 1D arrays.
+    #for k in range(psize.shape[0]):
     for k in range(psize.shape[0]):
         rsph_array=[]
         zsph_array=[]
         csph_array=[]
-        for j in range(MGP.shape[1]):                           # Over radius
-            for i in range(MGP.shape[0]):                       # Over theta
-                rsph_array.append((MGP[i,j].rsphere()*u.cm).to(u.au).value)
-                zsph_array.append((MGP[i,j].zsphere()*u.cm).to(u.au).value)
-                # Note that we store the log10 of the density
-                csph_array.append(np.log10(C_mcmax[k,i,j]))
+        for i in range(M_mgc_full.shape[0]):                           # Over theta
+            for j in range(M_mgc_full.shape[1]):                       # Over radius
+                rsph_array.append((M_mgc_full[i,j].rsphere()*u.cm).to(u.au).value)
+                zsph_array.append((M_mgc_full[i,j].zsphere()*u.cm).to(u.au).value)
+                csph_array.append(np.log10(M_mgc_full[i,j].comp[k]))
 
         # Uncomment the preferred interpolator. Rbf seems to work nicely.
         #f=interp2d(rsph_array,zsph_array,csph_array,kind='linear',bounds_error=False)
         f=Rbf(rsph_array,zsph_array,csph_array,function='linear')
 
         # Interpolate logarithm of densities into ProDiMo grid
-        for i in range(C_prodimo.shape[1]):                 # Over z
-            for j in range(C_prodimo.shape[2]):             # Over radius
-                rprodimo=C_prodimo[k,i,j].r                 # au
-                zprodimo=C_prodimo[k,i,j].z                 # au
-                C_prodimo[k,i,j].comp=f(rprodimo,zprodimo)  # g cm^-3
+        for i in range(M_pgc_full.shape[0]-1):                 # Over z
+            for j in range(M_pgc_full.shape[1]):               # Over radius
+                rprodimo=M_pgc_full[i,j].r                     # au
+                zprodimo=M_pgc_full[i,j].z_min                 # au
+                M_pgc_full[i,j].comp[k]=f(rprodimo,zprodimo)
+
+    """
+    ff=open("temp.dat","w")
+    for i in range(M_pgc_full.shape[0]-1):
+        ff.write("r=%.2f\t z=%.2f\t log rho amin=%.15f\t log rho amax=%.15f\n"%(M_pgc_full[i,1].r,
+                                                                                M_pgc_full[i,1].z_min,
+                                                                                M_pgc_full[i,1].comp[0],
+                                                                                M_pgc_full[i,1].comp[35]))
+    ff.close()
+    sys.exit()
+    """
+
+    #Interpolate density profile
+    fobj=upload_file(model+"/surface_density_PDS70_70_cropped.dat")
+    x_array=fobj.x
+    y_array=fobj.y
+    cs=CubicSpline(x_array,y_array)
+    S_array=np.array([cs(i) for i in r_array])
+
+    ##### All good up until here!!!!!!!!!!
 
     # Declaring fsize matrix
-    """
-    fsize=np.zeros((C_prodimo.shape[0],C_prodimo.shape[2]))
-    for k in range(C_prodimo.shape[0]):          # Over composition
-        for j in range(C_prodimo.shape[2]):      # Over radius
-            rho_vals,z_vals=[],[]
-            for i in range(C_prodimo.shape[1]):  # Over height
-                rho_vals.append(10**float(C_prodimo[k,i,j].comp))
-                z_vals.append((C_prodimo[k,i,j].z*u.au).to(u.cm).value)
-            fsize[k,j]=2*simps(rho_vals,z_vals)
-    """
-    fsize=np.zeros((C_prodimo.shape[0],C_prodimo.shape[2]))
-    for k in range(C_prodimo.shape[0]):          # Over composition
-        for j in range(C_prodimo.shape[2]):      # Over radius
+    fsize=np.zeros((psize.shape[0],M_pgc_full.shape[1]))
+    for k in range(psize.shape[0]):               # Over composition
+        for j in range(M_pgc_full.shape[1]):      # Over radius
             S_val=0.0
-            for i in range(C_prodimo.shape[1]):  # Over height
-                rho_val=10**float(C_prodimo[k,i,j].comp)
-                S_val+=rho_val*C_prodimo[k,i,j].dz
+            for i in range(M_pgc_full.shape[0]-1):  # Over height
+                rho_val=10**float(M_pgc_full[i,j].comp[k])
+                S_val+=rho_val*M_pgc_full[i,j].dz()
             # Multiply by 2 to account for cells below the midplane
             fsize[k,j]=2*S_val
 
+    #sys.exit()
     if visual:
         ''' Quick plot to check things out '''
         fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
         for i in range(psize.shape[0]):
             if i==0:
-                ax1.plot(r_array,fsize[i],'--',label="%.3f micron"%(psize[i,0]))
+                ax1.plot(r_array,fsize[i],'.',label="%.3f micron"%(psize[i,0]))
             elif i==psize.shape[0]-1:
-                ax1.plot(r_array,fsize[i],'--',label="%.3f micron"%(psize[i,0]))
+                ax1.plot(r_array,fsize[i],'.',label="%.3f micron"%(psize[i,0]))
             else:
                 if i%10==0:
-                    ax1.plot(r_array,fsize[i])
+                    ax1.plot(r_array,fsize[i],'.')
 
         density_reconstructed=np.zeros(fsize.shape[1])
 
         for j in range(fsize.shape[1]):
             density_reconstructed[j]=np.sum(np.reshape(fsize[:,j:j+1],fsize.shape[0]))
 
-        ax2.plot(fobj.x,fobj.y,label='original')
+        ax2.plot(fobj.x,fobj.y,'+',label='original')
         ax2.plot(r_array,density_reconstructed,'.',label='reconstructed')
 
         ax1.set_yscale("log")
@@ -445,61 +610,20 @@ def convert_density_file(fobj,psize=None,visual=None,mcmax_like=None):
         ax2.legend()
         plt.show()
 
-    ''' Convert to prodimopy units '''
+
+    # The gas-to-dust ratio
+    g2d=10.0
+    g2d_array=g2d*np.ones(len(S_array))
+
+    # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
     r_array=(r_array*u.au).to(u.cm)
 
-
-    ''' Calling prodimopy '''
+    # Calling prodimopy
     write("sdprofile.in",r_array.value,S_array*g2d,g2d_array,ai_array.value,fsize)
 
     return None
 
-
-def find_mass_temp(fobj,psize,cprodimo):
-    ### Computing fsize matrix
-    fsize=np.zeros((cprodimo.shape[0],cprodimo.shape[2]))
-    r_array=[]
-    for k in range(cprodimo.shape[0]): # Over composition
-        for j in range(cprodimo.shape[2]): # Over radius
-            if k==0:
-                r_array.append(cprodimo[0,0,j].r)
-            rho_vals,z_vals=[],[]
-            for i in range(cprodimo.shape[1]): # Over height
-                rho_vals.append(10**float(cprodimo[k,i,j].comp))
-                z_vals.append((cprodimo[k,i,j].z*u.au).to(u.cm).value)
-            fsize[k,j]=2*simps(rho_vals,z_vals)
-
-    density_reconstructed=np.zeros(fsize.shape[1])
-    for j in range(fsize.shape[1]):
-        density_reconstructed[j]=np.sum(np.reshape(fsize[:,j:j+1],fsize.shape[0]))
-
-    ''' Quick plot to check things out '''
-    fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
-    for i in range(psize.shape[0]):
-        if i==0:
-            ax1.plot(r_array,fsize[i],'--',label="%.3f micron"%(psize[i,0]))
-        elif i==psize.shape[0]-1:
-            ax1.plot(r_array,fsize[i],'--',label="%.3f micron"%(psize[i,0]))
-        else:
-            if i%10==0:
-                ax1.plot(r_array,fsize[i])
-    ax2.plot(fobj.x,fobj.y,label='original')
-    ax2.plot(r_array,density_reconstructed,'.',label='reconstructed')
-    #plt.plot(fobj.x,fobj.y,label='original')
-    #plt.plot(r_array,density_reconstructed,'.',label='reconstructed')
-
-    #ax1.set_yscale("log")
-    #plt.yscale("log")
-    #ax1.legend()
-    ax1.set_yscale("log")
-    ax2.set_yscale("log")
-    ax1.legend()
-    ax2.legend()
-    plt.show()
-    #plt.show()
-
-    return None
 
 
 def Lfuv(M,R,Mdot,Rin=None):
