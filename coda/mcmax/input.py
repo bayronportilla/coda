@@ -8,18 +8,34 @@ class File:
 
     def calculate_mass(self,rlim=None):
 
+        """
+
+        Integrate the density profile to find the mass.
+
+        Parameters
+        ----------
+        rlim    : (rmin,rmax) to only integrate between rmin <= r <= rmax.
+                If rlim is None, calculate the total mass. [au,au] (tuple).
+
+        """
+
         x=(self.x*u.au).to(u.cm).value
         y=self.y
 
         if rlim is not None:
-            rlim=(rlim*u.au).to(u.cm).value
-            xlim,ylim=[],[]
+            # Convert limits to cm
+            rmin,rmax=rlim
+            rmin=(rmin*u.au).to(u.cm).value
+            rmax=(rmax*u.au).to(u.cm).value
+
+            # Start integration
+            xint,yint=[],[]
             for i,j in zip(x,y):
-                if i<rlim:
-                    xlim.append(i)
-                    ylim.append(j)
-            xlim,ylim=np.array(xlim),np.array(ylim)
-            dust_mass=(2*np.pi*simps(xlim*ylim,xlim)*u.g).to(u.Msun)
+                if i>=rmin and i<=rmax:
+                    xint.append(i)
+                    yint.append(j)
+            xint,yint=np.array(xint),np.array(yint)
+            dust_mass=(2*np.pi*simps(xint*yint,xint)*u.g).to(u.Msun)
         else:
             dust_mass=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
 
