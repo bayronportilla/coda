@@ -32,31 +32,45 @@ class File:
         ax.set(xscale="log",yscale="log")
         plt.show()
 
-    def rescale_mass(self,k,rmin=None):
+    def rescale_mass(self,k,rlim=None):
 
-        '''
-        Rescale density profile by a factor of k.
+        """
 
-        Parameters:
-            k (float): rescaling factor.
-            rmin (float): to only rescale the points r>=rmin or r<=rmin.
-            If rmin is None, rescale the entire profile.
-        '''
+        Rescale surface density profile by a factor of k.
 
-        x,y=(self.x*u.au).to(u.cm).value,self.y
+        Parameters
+        ----------
+
+        k       : rescaling factor. [dimensionless] (float).
+        rlim    : (rmin,rmax) to only rescale the points with rmin <= r <= rmax.
+                If rlim is None, rescale the entire profile. [au,au] (tuple).
+
+        """
+
+        x=(self.x*u.au).to(u.cm).value
+        y=self.y
+
         Mold=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
-        if rmin is None: ynew=k*y
-        if rmin is not None:
+
+        # Rescale the whole profile
+        if rlim is None:
+            ynew=k*y
+
+        # Rescale between rmin and rmax
+        if rlim is not None:
+            rmin,rmax=rlim
             ynew=[]
-            ynew+=[1*y[i] for i in range (len(self.x)) if self.x[i]<=rmin]
-            ynew+=[k*y[i] for i in range (len(self.x)) if self.x[i]>rmin]
+            for i in range(len(self.x)):
+                if self.x[i]>=rmin and self.x[i]<=rmax:
+                    ynew+=[k*y[i]]
+                else:
+                    ynew+=[1*y[i]]
 
         Mnew=(2*np.pi*simps(x*ynew,x)*u.g).to(u.Msun)
 
         ''' Print info '''
         print("\nInitial mass:",Mold)
         print("Rescaled mass:",Mnew)
-        #print("Mnew/Mold: %.3f"%(Mnew/Mold))
 
         ''' Create rescaled mass file '''
         f=open(self.name+".rescaled","w")
@@ -255,12 +269,16 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
     Parameters
     ----------
-    model:  path to the MCMax3D model directory (str)
+    model   : path to the MCMax3D model directory. (str)
+    visual  : If true, shows the computed density profile for a selected dust
+            sizes and also the reconstructed profile compared to the original one.
+            (Bool).
 
     Example
     -------
     1. Run a stop_after_init ProDiMo model to create a cylindrical grid if needed.
-    Remember to run with interface_1D=.false.
+    Remember to run with interface_1D=.false. Remember also to set the Nxx variable
+    to match the total number of radial points of the MCMax3D model.
     >>> cd <path-to-ProDiMo-model>
     >>> nano Parameter.in
     >>> prodimo
@@ -270,6 +288,8 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
     >>> ipython
     >>> from coda.mcmax import input
 
+    3. Call the module passing the appropriate parameters
+    >>> input.convert_density_file("<path-to-MCMax3D-model>",visual=True,find_dust_mass=False)
 
 
     '''
@@ -496,11 +516,11 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                                     np.ones(psize.shape[0]))
             M_pgc_full[i,j]=GP_prodimo
 
-    
+
     for i in range(M_pgc_full.shape[0]-1):
         for j in range(M_pgc_full.shape[1]):
             M_pgc_full[i,j].r=(M_mgc_full[-1,j].r*u.cm).to(u.au).value
-            
+
 
     '''
     for j in range(M_pgc_full.shape[1]):
@@ -633,7 +653,7 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
 
     # The gas-to-dust ratio
-    g2d=10.0
+    g2d=100.0
     g2d_array=g2d*np.ones(len(S_array))
 
     # Converting to ProDiMo units
