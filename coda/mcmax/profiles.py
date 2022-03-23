@@ -27,14 +27,16 @@ def get_profile(image,dist,pa,inc,aperture,
                 the axis of symetry of the aperture is 10 deg apart from the
                 disk's major axis (defined by the position angle argument)
 
-    If you want to create an azimuthally averaged profile just use:
-    >>> aperture=[0,360,stepsize]
-
     Output
     ------
     A three-column plain text file containing the distance from the star in
     arcsec, and the average intensity and standard deviation in the units
     specified by the input data cube.
+
+    Example
+    -------
+    If you want to create an azimuthally averaged profile just use:
+    >>> aperture=[0,360,stepsize]
 
     """
 
