@@ -3,7 +3,7 @@ from matplotlib.colors import LogNorm
 
 '''
 
-This module is largely based on the Gofish package by Richard Teague.
+This module is largely dependant on the Gofish package by Richard Teague.
 
 '''
 
@@ -13,8 +13,7 @@ def get_profile(image,dist,pa,inc,aperture,
 
     """
 
-    Extract the signal from a disk using concentric annuli and a conical
-    aperture with user-defined properties.
+    Extract the signal using user-defined properties to mask the disk.
 
     Parameters
     ----------
