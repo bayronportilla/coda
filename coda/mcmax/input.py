@@ -237,7 +237,7 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(model,visual=None,find_dust_mass=None):
+def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
 
     '''
 
@@ -285,7 +285,11 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
     Parameters
     ----------
-    model   : path to the MCMax3D model directory. (str)
+    model   : path to the MCMax3D model directory. (str).
+    g2d     : The gas-to-dust ratio array. If g2d is None assume to be 100
+            everywhere. If len(g2d)=1, use a constant g2d ratio of g2d[0]. If
+            len(g2d)!=1 then g2d *must* be defined at every radial point in the
+            grid.
     visual  : If true, shows the computed density profile for a selected dust
             sizes and also the reconstructed profile compared to the original one.
             (Bool).
@@ -323,7 +327,6 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
         phi_min:float
         comp:float
 
-
         def dV(self):
             # Units: cm^3
 
@@ -335,12 +338,10 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
 
             return value
 
-
         def dz(self):
             # Units: cm
             value=self.r*self.dtheta
             return value
-
 
         def zsphere(self):
 
@@ -361,7 +362,6 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                 value=self.r*np.cos(self.theta)
 
             return value
-
 
         def rsphere(self):
 
@@ -463,22 +463,7 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                                     comp)
                         if k==0.0 and j<len(tmid)*0.5:
                             M_mgc[j,i]=GP
-        '''
-        if find_dust_mass is False:
-            # The not-too-big loop
-            for i in range(C.shape[5]):             # Along r
-                for j in range(C.shape[4]):         # Along theta
-                    if j<int(len(tmid)*0.5):
-                        comp=C[0,:,0,0,j,i] # g cm^-3
-                        GP=CellMcmax(rmid[i],tmid[j],pmid[0],
-                                    rlim[i+1],rlim[i],
-                                    tlim[j+1],tlim[j],
-                                    plim[1],plim[0],
-                                    comp)
-                        M_mgc[j,i]=GP
-                    else:
-                        continue
-        '''
+
         if find_dust_mass is False:
             # The not-too-big loop
             for i in range(C.shape[5]):             # Along r
@@ -501,29 +486,14 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
     rmidAU_2,M_mgc_2=func_fsize(2)[0],func_fsize(2)[1]
     M_mgc_full=np.concatenate((M_mgc_1,M_mgc_2),axis=1)
     r_array=np.concatenate((rmidAU_1,rmidAU_2))
-    """
-    for i in range(M_mgc_full.shape[0]):
-        print("%d %.15e %.5f %.5f"%(i,M_mgc_full[i,-1].comp[39],(M_mgc_full[i,-1].zsphere()*u.cm).to(u.au).value,
-                                    (M_mgc_full[i,-1].r*u.cm).to(u.au).value))
-    """
 
     # Read ProDiMo grid. This steps requires prodimopy!
     model_prodimo=read_prodimo()
     r_array_p=np.reshape(model_prodimo.x[:,0:1],model_prodimo.x.shape[0])   # au
     z_matrix=model_prodimo.z                             # au, dim:len(r)*len(z)
 
-    # Declaring and filling in the C matrix (composition matrix) for MCMax3D.
-    # It only stores the mass density per grain size, i.e. there is one Ntheta/2 x Nradius matrix per
-    # grain size
-    '''
-    C_mcmax=np.zeros((psize.shape[0],M_mgc_full.shape[0],M_mgc_full.shape[1]))
-    for k in range(C_mcmax.shape[0]):           # Over grain size
-        for i in range(C_mcmax.shape[1]):       # Over theta
-            for j in range(C_mcmax.shape[2]):   # Over radius
-                C_mcmax[k,i,j]=M_mgc_full[i,j].comp[k]
-    '''
-
-    # Declaring and filling in M_pgc_full matrix for ProDiMo. Note that composition is initialized to array of ones.
+    # Declaring and filling in M_pgc_full matrix for ProDiMo. Note that
+    # composition is initialized to an array of ones.
     M_pgc_full=np.empty((z_matrix.shape[1],z_matrix.shape[0]),dtype='object')
     for i in range(M_pgc_full.shape[0]-1):       # Over z
         for j in range(M_pgc_full.shape[1]):     # Over radius
@@ -532,19 +502,11 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                                     np.ones(psize.shape[0]))
             M_pgc_full[i,j]=GP_prodimo
 
-
+    # Validate this step ---> (!)
     for i in range(M_pgc_full.shape[0]-1):
         for j in range(M_pgc_full.shape[1]):
             M_pgc_full[i,j].r=(M_mgc_full[-1,j].r*u.cm).to(u.au).value
 
-
-    '''
-    for j in range(M_pgc_full.shape[1]):
-        print(M_pgc_full[0,j].r,(M_mgc_full[-1,j].r*u.cm).to(u.au).value)
-    print(M_pgc_full.shape)
-    print(M_mgc_full.shape)
-    '''
-    #sys.exit()
     # Printing grid's limits
     # Radial limits MCMax
     print("\n Following are the coordinates for the cell's center (for MCMax)!!!")
@@ -609,25 +571,12 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
                 zprodimo=M_pgc_full[i,j].z_min                 # au
                 M_pgc_full[i,j].comp[k]=f(rprodimo,zprodimo)
 
-    """
-    ff=open("temp.dat","w")
-    for i in range(M_pgc_full.shape[0]-1):
-        ff.write("r=%.2f\t z=%.2f\t log rho amin=%.15f\t log rho amax=%.15f\n"%(M_pgc_full[i,1].r,
-                                                                                M_pgc_full[i,1].z_min,
-                                                                                M_pgc_full[i,1].comp[0],
-                                                                                M_pgc_full[i,1].comp[35]))
-    ff.close()
-    sys.exit()
-    """
-
     #Interpolate density profile
     fobj=upload_file(model+"/surface_density_PDS70_70_cropped.dat")
     x_array=fobj.x
     y_array=fobj.y
     cs=CubicSpline(x_array,y_array)
     S_array=np.array([cs(i) for i in r_array])
-
-    ##### All good up until here!!!!!!!!!!
 
     # Declaring fsize matrix
     fsize=np.zeros((psize.shape[0],M_pgc_full.shape[1]))
@@ -640,7 +589,6 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
             # Multiply by 2 to account for cells below the midplane
             fsize[k,j]=2*S_val
 
-    #sys.exit()
     if visual:
         ''' Quick plot to check things out '''
         fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
@@ -667,10 +615,20 @@ def convert_density_file(model,visual=None,find_dust_mass=None):
         ax2.legend()
         plt.show()
 
-
     # The gas-to-dust ratio
-    g2d=100.0
+    if g2d is None:
+        g2d=100.0
+    else:
+        if len(g2d)==1:
+            g2d=g2d[0]
+        else:
+            print("Option no yet available! Try again.")
+
     g2d_array=g2d*np.ones(len(S_array))
+
+
+    print("\n Working with g2d = ",g2d)
+
 
     # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
