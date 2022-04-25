@@ -283,6 +283,10 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
     *   The number of radial points of the ProDiMo grid must be equal to that in
         the MCMax3D model.
 
+    *   For production results, it is advisable to run the MCMax3D model with a
+        refined radial grid, Nr>=60 per zone as long as this is computationally
+        feasible.
+
     Parameters
     ----------
     model   : path to the MCMax3D model directory. (str).
