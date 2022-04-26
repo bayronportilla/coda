@@ -623,10 +623,15 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
     if g2d is None:
         g2d=100.0
     else:
-        if len(g2d)==1:
-            g2d=g2d[0]
-        else:
-            print("Option no yet available! Try again.")
+        if type(g2d)==list:
+            if len(g2d)==1:
+                g2d=g2d[0]
+            else:
+                print("Option no yet available! Try again.")
+        elif type(g2d)==str
+            print("Reading g2d from file")
+
+    sys.exit()
 
     g2d_array=g2d*np.ones(len(S_array))
 
