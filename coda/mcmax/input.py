@@ -290,10 +290,11 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
     Parameters
     ----------
     model   : path to the MCMax3D model directory. (str).
-    g2d     : The gas-to-dust ratio array. If g2d is None assume to be 100
-            everywhere. If len(g2d)=1, use a constant g2d ratio of g2d[0]. If
-            len(g2d)!=1 then g2d *must* be defined at every radial point in the
-            grid.
+    g2d     : The gas-to-dust ratio. If g2d is None assume to be 100
+            everywhere. If g2d is a list and len(g2d)=1, use a constant g2d
+            ratio of g2d[0]. If g2d is a two-column file containing the g2d ratio
+            (second column) in function of the distance in AU (first column), then
+            the g2d ratio will be interpolated at each radial point in the grid.
     visual  : If true, shows the computed density profile for a selected dust
             sizes and also the reconstructed profile compared to the original one.
             (Bool).
@@ -596,6 +597,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
     if visual:
         ''' Quick plot to check things out '''
         fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
+        fig.suptitle('Dust column density reconstruction')
         for i in range(psize.shape[0]):
             if i==0:
                 ax1.plot(r_array,fsize[i],'.',label="%.3f micron"%(psize[i,0]))
@@ -615,17 +617,19 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
 
         ax1.set_yscale("log")
         ax2.set_yscale("log")
-        ax1.legend()
-        ax2.legend()
+        ax1.legend(frameon=False)
+        ax2.legend(frameon=False)
         plt.show()
 
     # The gas-to-dust ratio
     if g2d is None:
         g2d=100.0
+        g2d_array=g2d*np.ones(len(S_array))
     else:
         if type(g2d)==list:
             if len(g2d)==1:
                 g2d=g2d[0]
+                g2d_array=g2d*np.ones(len(S_array))
             else:
                 print("Option no yet available! Try again.")
         elif type(g2d)==str:
@@ -633,23 +637,15 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             data_from_file=np.loadtxt(g2d)
             r_from_file=np.reshape(data_from_file[:,0:1],data_from_file.shape[0])
             g2d_from_file=np.reshape(data_from_file[:,1:2],data_from_file.shape[0])
-            print(r_from_file)
-            print(g2d_from_file)
-
-    sys.exit()
-
-    g2d_array=g2d*np.ones(len(S_array))
-
-
-    print("\n Working with g2d = ",g2d)
-
+            csg2d=CubicSpline(r_from_file,g2d_from_file)
+            g2d_array=csg2d(r_array)
 
     # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
     r_array=(r_array*u.au).to(u.cm)
 
     # Calling prodimopy
-    write("sdprofile.in",r_array.value,S_array*g2d,g2d_array,ai_array.value,fsize)
+    write("sdprofile.in",r_array.value,S_array*g2d_array,g2d_array,ai_array.value,fsize)
 
     return None
 
