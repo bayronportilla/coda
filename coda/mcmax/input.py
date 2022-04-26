@@ -629,7 +629,12 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             else:
                 print("Option no yet available! Try again.")
         elif type(g2d)==str:
-            print("Reading g2d from file")
+            print("Reading g2d from file: %s"%(g2d))
+            data_from_file=np.loadtxt(g2d)
+            r_from_file=np.reshape(data_from_file[:,0:1],data_from_file.shape[0])
+            g2d_from_file=np.reshape(data_from_file[:,1:2],data_from_file.shape[0])
+            print(r_from_file)
+            print(g2d_from_file)
 
     sys.exit()
 
