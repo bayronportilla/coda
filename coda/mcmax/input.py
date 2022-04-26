@@ -630,7 +630,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
 
     g2d_array=g2d*np.ones(len(S_array))
 
-    
+
     print("\n Working with g2d = ",g2d)
 
 
