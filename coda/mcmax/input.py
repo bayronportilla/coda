@@ -637,8 +637,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             data_from_file=np.loadtxt(g2d)
             r_from_file=np.reshape(data_from_file[:,0:1],data_from_file.shape[0])
             g2d_from_file=np.reshape(data_from_file[:,1:2],data_from_file.shape[0])
-            csg2d=CubicSpline(r_from_file,g2d_from_file)
-            g2d_array=csg2d(r_array)
+            g2d_array=np.interp(r_array,r_from_file,g2d_from_file) # Linear interpolation
 
     # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
