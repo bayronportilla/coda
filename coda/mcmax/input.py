@@ -295,6 +295,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             ratio of g2d[0]. If g2d is a two-column file containing the g2d ratio
             (second column) in function of the distance in AU (first column), then
             the g2d ratio will be interpolated at each radial point in the grid.
+            A file containing the interpolated g2d ratio profile will be created.
     visual  : If true, shows the computed density profile for a selected dust
             sizes and also the reconstructed profile compared to the original one.
             (Bool).
@@ -638,6 +639,12 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             r_from_file=np.reshape(data_from_file[:,0:1],data_from_file.shape[0])
             g2d_from_file=np.reshape(data_from_file[:,1:2],data_from_file.shape[0])
             g2d_array=np.interp(r_array,r_from_file,g2d_from_file) # Linear interpolation
+
+            # Creating output file for interpolated g2d profile
+            fg2d=open(g2d+".interpolated","w")
+            for i,j in zip(r_array,g2d_array):
+                fg2d.write("%.5f    %.5f\n"%(i,j))
+            fg2d.close()
 
     # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
