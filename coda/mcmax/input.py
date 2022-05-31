@@ -237,7 +237,7 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,left=None):
+def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=None):
 
     '''
 
