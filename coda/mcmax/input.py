@@ -300,7 +300,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,left=Non
             sizes and also the reconstructed profile compared to the original one.
             (Bool).
     leftg2d : This sets the value of the g2d at those radial grid points to the
-            of the minimum distance included in the g2d file. (float)
+            left of the minimum distance included in the g2d file. (float)
 
     Example
     -------
