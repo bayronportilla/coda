@@ -237,7 +237,7 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
+def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,left=None):
 
     '''
 
@@ -299,6 +299,8 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
     visual  : If true, shows the computed density profile for a selected dust
             sizes and also the reconstructed profile compared to the original one.
             (Bool).
+    leftg2d : This sets the value of the g2d at those radial grid points to the
+            of the minimum distance included in the g2d file. (float)
 
     Example
     -------
@@ -316,7 +318,6 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
 
     3. Call the module passing the appropriate parameters
     >>> input.convert_density_file("<path-to-MCMax3D-model>",visual=True,find_dust_mass=False)
-
 
     '''
 
@@ -634,11 +635,16 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None):
             else:
                 print("Option no yet available! Try again.")
         elif type(g2d)==str:
+
             print("Reading g2d from file: %s"%(g2d))
             data_from_file=np.loadtxt(g2d)
             r_from_file=np.reshape(data_from_file[:,0:1],data_from_file.shape[0])
             g2d_from_file=np.reshape(data_from_file[:,1:2],data_from_file.shape[0])
-            g2d_array=np.interp(r_array,r_from_file,g2d_from_file) # Linear interpolation
+
+            if leftg2d is not None:
+                g2d_array=np.interp(r_array,r_from_file,g2d_from_file,left=leftg2d) # Linear interpolation
+            else:
+                g2d_array=np.interp(r_array,r_from_file,g2d_from_file) # Linear interpolation
 
             # Creating output file for interpolated g2d profile
             fg2d=open(g2d+".interpolated","w")
