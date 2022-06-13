@@ -258,7 +258,7 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     return None
 
 
-def convert_to_fits(model,lineID):
+def convert_to_fits(model,lineID,prefix):
 
     """
 
@@ -268,6 +268,9 @@ def convert_to_fits(model,lineID):
     ----------
     model   : path to the ProDiMo model directory [str]
     lineID  : identificator of the emission line fits file produced by ProDiMo [str]
+    prefix  : The prefix of the CASA measurement set to be converted into fits.
+            The prefix are those characters to the right of the last period in the
+            measurement set's name.
 
     """
 
@@ -277,7 +280,7 @@ def convert_to_fits(model,lineID):
     default('exportfits')
 
     # Define the 'cube' variable
-    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line.mom0.Tb"
+    cube=os.popen("find %s -type d -name '*.%s'"%(model,prefix)).read()[:-1]
 
     # Convert CASA image into a fits image
     exportfits(imagename=cube,
@@ -289,18 +292,18 @@ def convert_to_fits(model,lineID):
 
 ################################################################################
 # Running the pipeline
-model='/Users/bportilla/Documents/project2/ProDiMo_models/run016'
+model='/Users/bportilla/Documents/project2/ProDiMo_models/run031'
 angle=70.4 # Angle for cube rotation ---> Explain this in detail (!)
 
-lineID='005'
+lineID='004'
 bmaj=0.31
 bmin=0.24
-pa=80.73
-nu0=2.19560296e11
+pa=81.39
+nu0=2.20398682e11
 
 rotate(model,lineID,angle)
 convolve(model,lineID,bmaj,bmin,pa)
 subtract_continuum(model,lineID)
 create_moments(model,lineID)
 convert_units(model,lineID,nu0,bmaj,bmin)
-convert_to_fits(model,lineID)
+convert_to_fits(model,lineID,'Tb')
