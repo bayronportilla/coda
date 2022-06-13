@@ -1,5 +1,4 @@
 from coda.mcmax.header import *
-from matplotlib.colors import LogNorm
 
 '''
 
@@ -43,38 +42,49 @@ def get_profile(image,dist,pa,inc,aperture,
     # Load the data cube
     cube=imagecube(image,FOV=fov,bunit=bunit,pixel_scale=pxscale)
 
-    # Determine limits of the conical aperture
-    padir=aperture[0]
-    widir=aperture[1]
-    dr=aperture[2]
-    PAmin=padir-0.5*widir
-    PAmax=padir+0.5*widir
+    if cube.data.ndim==2:
 
-    # Extracting radial profile with GoFish
-    xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
-                                      x0=0.0,y0=0.0,assume_correlated=False,
-                                      PA_min=PAmin,PA_max=PAmax,dr=dr)
+        print("\n Working with a two-dimensional fits image \n")
 
-    # Plot the aperture?
-    if visual:
-        vmax=np.percentile(cube.data,99)
-        vmin=np.percentile(cube.data,1)
-        fig,(ax1,ax2)=plt.subplots(1,2,figsize=(12,5))
-        ax1.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
-        cube.plot_mask(ax=ax1,PA_min=PAmin,PA_max=PAmax,
-                        inc=inc,PA=pa,mask_frame='disk',r_max=1.5)
-        if ebar is True:
-            ax2.errorbar(xm,ym,dym)
-        if ebar is None:
-            ax2.plot(xm,ym)
-        ax2.set(xlabel="r (arcsec)",ylabel="Intensity/flux density")
-        plt.show()
+        # Determine limits of the conical aperture
+        padir=aperture[0]
+        widir=aperture[1]
+        dr=aperture[2]
+        PAmin=padir-0.5*widir
+        PAmax=padir+0.5*widir
 
-    # Write to file?
-    if write:
-        file=open(image+".radial","w")
-        for i,j,k in zip(xm,ym,dym):
-            file.write("%.15e %.15e %.15e\n"%(i,j,k))
-        file.close()
+
+        # Extracting radial profile with GoFish
+        xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
+                                          x0=0.0,y0=0.0,assume_correlated=False,
+                                          PA_min=PAmin,PA_max=PAmax,dr=dr)
+
+        # Plot the aperture?
+        if visual:
+            vmax=np.percentile(cube.data,99)
+            vmin=np.percentile(cube.data,1)
+            fig,(ax1,ax2)=plt.subplots(1,2,figsize=(12,5))
+            ax1.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
+            cube.plot_mask(ax=ax1,PA_min=PAmin,PA_max=PAmax,
+                            inc=inc,PA=pa,mask_frame='disk',r_max=1.5)
+            if ebar is True:
+                ax2.errorbar(xm,ym,dym)
+            if ebar is None:
+                ax2.plot(xm,ym)
+            ax2.set(xlabel="r (arcsec)",ylabel="Intensity/flux density")
+            plt.show()
+
+        # Write to file?
+        if write:
+            file=open(image+".radial","w")
+            for i,j,k in zip(xm,ym,dym):
+                file.write("%.15e %.15e %.15e\n"%(i,j,k))
+            file.close()
+
+    else:
+        print("\n Working with a data cube \n")
+
+        
+
 
     return None
