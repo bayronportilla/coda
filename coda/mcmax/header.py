@@ -17,3 +17,4 @@ from scipy.interpolate import Rbf
 import pandas as pd
 from gofish import imagecube
 from astropy.convolution import convolve,Gaussian2DKernel
+from matplotlib.colors import LogNorm
