@@ -295,11 +295,11 @@ def convert_to_fits(model,lineID,prefix):
 model='/Users/bportilla/Documents/project2/ProDiMo_models/run030'
 angle=70.4 # Angle for cube rotation ---> Explain this in detail (!)
 
-lineID='004'
-bmaj=0.31
-bmin=0.24
-pa=81.39
-nu0=2.20398682e11
+lineID='001'
+bmaj=0.28
+bmin=0.23
+pa=81.34
+nu0=2.30537939e11
 
 rotate(model,lineID,angle)
 convolve(model,lineID,bmaj,bmin,pa)
