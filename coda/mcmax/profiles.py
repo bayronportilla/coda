@@ -8,7 +8,7 @@ This module is largely dependant on the Gofish package by Richard Teague.
 
 def get_profile(image,dist,pa,inc,aperture,
                 visual=None,write=None,fov=None,bunit=None,
-                pxscale=None,ebar=None):
+                pxscale=None,ebar=None,mstar=None,unit=None):
 
     """
 
@@ -16,7 +16,7 @@ def get_profile(image,dist,pa,inc,aperture,
 
     Parameters
     ----------
-    image       : path to the data cube (str)
+    image       : path to the data image or data cube (str)
     dist        : distance to the disk [pc] (float)
     pa          : the position angle of the disk [deg] (float)
     inc         : inclination of the disk [deg] (float)
@@ -82,9 +82,38 @@ def get_profile(image,dist,pa,inc,aperture,
             file.close()
 
     else:
+
         print("\n Working with a data cube \n")
 
-        
+        # Determine limits of the conical aperture
+        padir=aperture[0]
+        widir=aperture[1]
+        dr=aperture[2]
+        PAmin=padir-0.5*widir
+        PAmax=padir+0.5*widir
+
+        # Extracting radial profile with GoFish
+
+        xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
+                                          x0=0.0,y0=0.0,assume_correlated=False,
+                                          PA_min=PAmin,PA_max=PAmax,dr=dr,
+                                          unit=unit)
+        """
+        xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
+                                          unit=unit)
+        """
+
+        file=open("13CO.radial.cube.WithAperture","w")
+        for i,j,k in zip(xm,ym,dym):
+            file.write("%.15e %.15e %.15e\n"%(i,j,k))
+        file.close()
+
+        #plt.plot(xm,ym,'.')
+        #plt.show()
+
+
+
+
 
 
     return None
