@@ -413,7 +413,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
 
 
     # Computing psize
-    print("\n Computing psize... \n")
+    print("\n Retrieving dust size distribution from MCMax3D model... \n")
     psize=get_size_distribution(model)
     ai_array=psize[:,0] # microns
 
@@ -516,7 +516,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
 
     # Printing grid's limits
     # Radial limits MCMax
-    print("\n Following are the coordinates for the cell's center (for MCMax)!!!")
+    print("\n Following are the coordinates for the cell's center (for MCMax3D)!")
     print("----------------------------------------------------------")
     rmin_grid_mcmax=(M_mgc_full[-1,0].r*u.cm).to(u.au).value
     rmax_grid_mcmax=(M_mgc_full[-1,-1].r*u.cm).to(u.au).value
@@ -597,7 +597,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
             fsize[k,j]=2*S_val
 
     if visual:
-        ''' Quick plot to check things out '''
+        # Quick plot to check things out
         fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
         fig.suptitle('Dust column density reconstruction')
         for i in range(psize.shape[0]):
@@ -615,12 +615,19 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
             density_reconstructed[j]=np.sum(np.reshape(fsize[:,j:j+1],fsize.shape[0]))
 
         ax2.plot(fobj.x,fobj.y,'+',label='original')
-        ax2.plot(r_array,density_reconstructed,'.',label='reconstructed')
+        ax2.plot(r_array,density_reconstructed,'-',label='reconstructed')
 
         ax1.set_yscale("log")
         ax2.set_yscale("log")
+
         ax1.legend(frameon=False)
         ax2.legend(frameon=False)
+
+        ax1.set_xlabel("distance (au)")
+        ax2.set_xlabel("distance (au)")
+        ax1.set_ylabel("dust surface density (g/cm2)")
+        ax2.set_ylabel("dust surface density (g/cm2)")
+
         plt.show()
 
     # The gas-to-dust ratio
