@@ -1,6 +1,111 @@
 from coda.mcmax.header import *
 import matplotlib.ticker
 
+def get_opacities_2D(model,infile,Nzones):
+    '''
+
+    Read and plot opacities from a MCMax2D model. MCMax2D generates an output file
+    "kappas.dat" containing the absorption and scattering opacities for each grain size
+    to be read and plotted directly. File "particle_average.opacity" stores the
+    mass weighted absorption, scattering, and extinction opacities.
+
+
+    Parameters
+    ----------
+    model   : The Path to the MCMax model.
+    infile  : Name of the input file.
+    Nzones  : Number of zones
+
+    Example
+    -------
+
+
+    TODO:
+
+
+    '''
+
+    ############################################################
+    # Initializing stuff
+    Nbins=np.zeros(Nzones)
+    NPAHs=np.zeros(Nzones)
+    apows=np.zeros(Nzones)
+    psizes_min=np.zeros(Nzones)
+    psizes_max=np.zeros(Nzones)
+    psizes=[]
+
+    # Read input file
+    path_to_input=model+infile
+    infile=open(path_to_input).readlines()
+    for i in range(1,Nzones+1):
+        for line in infile:
+            if line.split("=")[0]==("computepart0%d:ngrains"%(i)):
+                Nbins[i-1]=int((line.split("=")[1]).split("\t")[0])
+            if line.split("=")[0]==("computepart0%d:amin"%(i)):
+                psizes_min[i-1]=float((line.split("=")[1]).split("\t")[0])
+            if line.split("=")[0]==("computepart0%d:amax"%(i)):
+                psizes_max[i-1]=float((line.split("=")[1]).split("\t")[0])
+            if line.split("=")[0]==("computepart0%d:apow"%(i)):
+                apows[i-1]=float((line.split("=")[1]).split("\t")[0])
+            if line.split("=")[0]==("computePAH0%d:ngrains"%(i+1)):
+                NPAHs[i-1]=float((line.split("=")[1]).split("\t")[0])
+
+    print(Nbins)
+    print(NPAHs)
+    print(apows)
+    print(psizes_min)
+    print(psizes_max)
+
+
+    # Readig opactiy files
+    data=np.loadtxt(model+'/output/kappas.dat')
+
+    # Wavelength array
+    wl=np.reshape(data[:,0],data.shape[0])
+
+    # Proceed to compute mass weighted opacity
+
+    # ...or just read the averaged opacity file
+    data_ave=np.loadtxt(model+'/output/particle_average.opacity')
+    plt.plot(data_ave[:,0],data_ave[:,1])
+    plt.plot(data_ave[:,0],data_ave[:,2])
+    plt.plot(data_ave[:,0],data_ave[:,3])
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.show()
+
+    # Plot
+    fig=plt.figure(figsize=(8,3))
+    gs=gridspec.GridSpec(1,Nzones,hspace=0.0)
+    lw=2.0
+    fsize=12
+    for i in range(0,Nzones):
+        ax=plt.subplot(gs[0,i])
+        ax.plot(ext[:,0:1],ext[:,i+1:i+2],label=r"extinction",color="cornflowerblue",linewidth=lw)
+        ax.plot(abso[:,0:1],abso[:,i+1:i+2],label=r"absorption",color="salmon",linewidth=lw)
+        ax.plot(sca[:,0:1],sca[:,i+1:i+2],label=r"scattering",color="seagreen",linewidth=lw)
+        ax.set(xscale='log',yscale='log')
+        ax.set_xlabel(r"$\lambda \, (\mu \mathrm{m})$",fontsize=fsize)
+        ax.margins(0.02)
+        ax.tick_params(labelsize=fsize)
+        if i==0:
+            ax.set_ylabel(r"Dust opacities (cm$^2$/g(dust))",fontsize=fsize)
+            ax.legend(fontsize=12,loc="lower left",frameon=False)
+            ''' Following lines were used to create the figure in Portilla-Revelo et al. 2021 '''
+            ymajor=matplotlib.ticker.LogLocator(base=1000,subs=[1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900])
+            ax.yaxis.set_major_locator(ymajor)
+        if label is not None:
+            ax.annotate("%s"%label[i],(0.85,0.9),xycoords='axes fraction',ha='center',va='center',color="dimgray")
+    gs.tight_layout(fig,w_pad=2)
+    plt.show()
+    ''' Save figure? '''
+    if save:
+        fig.savefig("opacities.ps",format='ps')
+    return None
+
+    return None
+
+
 def read_opacities(model,Nzones,fvSI,fvC):
 
     ############################################################
