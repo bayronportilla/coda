@@ -1,5 +1,5 @@
 from coda.mcmax.header import *
-plt.style.use('fancy')
+#plt.style.use('fancy')
 
 def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
            ylabel=None):
@@ -14,7 +14,7 @@ def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
 
     ax.set_xscale("log")
     ax.set_yscale("log")
-    
+
     ''' Modifiers '''
     if xlog is False:
         ax.set_xscale("linear")
@@ -49,6 +49,27 @@ def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
 
 @dataclass
 class Map:
+
+    '''
+    Base class that contains the reading and plotting routines of MCMax3D output
+    fields.
+
+    Accepted fieldnames are: 'temp',...
+
+    Examples
+    --------
+    * To read and p lot the equilibrium temperature in the midplane do:
+
+        1. Create the map. This will call mcmax3dpy
+        >>> td=maps.create_maps("<path-to-model>",fieldname='temp')
+
+        2. Compute the azimuthally averaged grain temperature in the midplane,
+        visualize and save to a file 'field_ave.dat'. Note that second column
+        is log10(td).
+        >>> td.plot_midplane(ave=True)
+
+    '''
+
     name:str
     x:float
     y:float
