@@ -2,12 +2,12 @@ from coda.mcmax.header import *
 #plt.style.use('fancy')
 
 def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
-           ylabel=None):
+           ylabel=None,title=None):
 
     ''' Default plotting '''
     fsize=14
     fig,ax=plt.subplots()
-    ax.plot(x,y)
+    ax.plot(x,y,'.')
 
     ax.set_xlabel(r"x",fontsize=fsize)
     ax.set_ylabel(r"y",fontsize=fsize)
@@ -27,6 +27,9 @@ def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
 
     if ylabel is not None:
         ax.set_ylabel(r"%s"%ylabel,fontsize=fsize)
+
+    if title is not None:
+        ax.set_title(r"%s"%title,fontsize=fsize)
 
 
     """
@@ -51,19 +54,22 @@ def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
 class Map:
 
     '''
-    Base class that contains the reading and plotting routines of MCMax3D output
+    Base class containing the reading and plotting routines of MCMax3D output
     fields.
 
     Accepted fieldnames are: 'temp',...
 
     Examples
     --------
-    * To read and p lot the equilibrium temperature in the midplane do:
+    * To read and plot the equilibrium temperature in the midplane do:
+
+        0. Import the library
+        >>> from coda.mcmax import maps
 
         1. Create the map. This will call mcmax3dpy
-        >>> td=maps.create_maps("<path-to-model>",fieldname='temp')
+        >>> td=maps.create_maps("<path-to-model>",fieldname='temp',cpd=False)
 
-        2. Compute the azimuthally averaged grain temperature in the midplane,
+        2. Compute the azimuthally averaged dust temperature in the midplane,
         visualize and save to a file 'field_ave.dat'. Note that second column
         is log10(td).
         >>> td.plot_midplane(ave=True)
@@ -150,7 +156,7 @@ class Map:
 
     ''' Plot the values on the midplane '''
     def plot_midplane(self,clines=None,fname=None,log=True,ave=None,fullave=None,
-                      xlog=None,ylog=None,xlabel=None,ylabel=None):
+                      xlog=None,ylog=None,xlabel=None,ylabel=None,title=None):
 
         """
         At the moment, this routine only supports plotting averaged quantities
@@ -182,9 +188,7 @@ class Map:
         r,phi=np.reshape(r[0],r.shape[1]),np.reshape(phi[:,0:1],phi.shape[0])
 
         if ave:
-
             std_array=[np.std(np.reshape(f[:,i:i+1],f.shape[0])) for i in range(0,f.shape[1])]
-
             while True:
                 F=int(input("Enter the F-value: "))
                 fig=plot_statistics(f,std_array,F,visual=True)
@@ -223,7 +227,7 @@ class Map:
             file.close()
 
         ''' Plotting '''
-        ax=axes1D(r_ave,10**f_ave,xlog,ylog,xlabel,ylabel)
+        ax=axes1D(r_ave,10**f_ave,xlog,ylog,xlabel,ylabel,title)
         plt.show()
 
         return None
@@ -288,8 +292,6 @@ def create_maps(model,fieldname,cpd=None):
         r,phi=r[:,:,int(zone.nr):],phi[:,:,int(zone.nr):]
         f=f[:,:,int(zone.nr):]
         print("fmin %.3f, fmax %.3f"%(f.min(),f.max()))
-
-
 
 
     return Map(fieldname,x,y,z,r,phi,f)
