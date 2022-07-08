@@ -41,11 +41,32 @@ class File:
 
         return dust_mass
 
-    def plot(self):
+    def plot(self,xlog=None,ylog=None,style=None,
+        xlabel=None,ylabel=None):
         x,y=self.x,self.y
         fig,ax=plt.subplots(1,1)
-        ax.plot(x,y,'.')
-        ax.set(xscale="log",yscale="log")
+
+        # Line style
+        if style is None:
+            ax.plot(x,y,'.')
+        else:
+            ax.plot(x,y,style)
+
+        # Modifiers
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        if xlog is False:
+            ax.set_xscale("linear")
+        if ylog is False:
+            ax.set_yscale("linear")
+        if xlabel is not None:
+            ax.set_xlabel(r"%s"%xlabel)
+        if ylabel is not None:
+            ax.set_ylabel(r"%s"%ylabel)
+
+
+
+
         plt.show()
 
     def rescale_mass(self,k,rlim=None):
