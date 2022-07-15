@@ -15,7 +15,7 @@ class File:
         Parameters
         ----------
         rlim    : (rmin,rmax) to only integrate between rmin <= r <= rmax.
-                If rlim is None, calculate the total mass. [au,au] (tuple).
+                If rlim is None, then it calculates the total mass. [au,au] (tuple).
 
         """
 
@@ -258,7 +258,7 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=None):
+def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,leftg2d=None):
 
     '''
 
@@ -438,6 +438,25 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
     psize=get_size_distribution(model)
     ai_array=psize[:,0] # microns
 
+
+    # Reading input file to get zone limits
+    Rin_array=[]
+    Rout_array=[]
+    infile=open(model+"/input.dat").readlines()
+
+    for i in range(1,Nzones+1):
+
+        for line in infile:
+
+            if line.split("=")[0]==("zone%d:Rin"%(i)):
+                Rin=float(line.split("=")[1])
+                Rin_array.append(Rin)
+
+            if line.split("=")[0]==("zone%d:Rout"%(i)):
+                Rout=float(line.split("=")[1])
+                Rout_array.append(Rout)
+
+
     def func_fsize(zoneID):
         # Import data from zones
         hdu_1=fits.open(model+"/output/Zone000%d.fits.gz"%(zoneID))
@@ -457,6 +476,7 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
         tlim=hdu_1[2].data   # rad
         plim=hdu_1[3].data   # rad
 
+        """
         # Correcting for radius
         if zoneID==1:
             rmidAU_min=0.04
@@ -469,14 +489,31 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
             rmid_max=(rmidAU_max*u.au).to(u.cm).value
             rmidAU[-1]=rmidAU_max
             rmid[-1]=rmid_max
+        """
+        # Correcting for radius at the inner and outer edge of the PPD
+        if zoneID==1:
+            rmidAU_min=Rin_array[zoneID-1]
+            rmid_min=(rmidAU_min*u.au).to(u.cm).value
+            rmidAU[0]=rmidAU_min
+            rmid[0]=rmid_min
+
+        if zoneID==Nzones:
+            rmidAU_max=Rout_array[-1]
+            rmid_max=(rmidAU_max*u.au).to(u.cm).value
+            rmidAU[-1]=rmidAU_max
+            rmid[-1]=rmid_max
+
 
         # Correcting for theta
         theta_midplane=(90.0*u.deg).to(u.rad).value
         tmid[int(len(tmid)*0.5-1)]=theta_midplane
 
+
         # Declare matrix required for interpolation
-        # Dim: len(theta)/2 x len(radius)
+        # Dim: len(theta)/2 x len(radius). Each entry is an instance of the
+        # CellMcmax class.
         M_mgc=np.empty((int(len(tmid)*0.5),len(rmid)),dtype='object')
+
 
         if find_dust_mass is True:
             # The big loop
@@ -509,16 +546,30 @@ def convert_density_file(model,g2d=None,visual=None,find_dust_mass=None,leftg2d=
 
         return rmidAU,M_mgc
 
-    # Concatenate fsizes and rmidAU
-    rmidAU_1,M_mgc_1=func_fsize(1)[0],func_fsize(1)[1]
-    rmidAU_2,M_mgc_2=func_fsize(2)[0],func_fsize(2)[1]
-    M_mgc_full=np.concatenate((M_mgc_1,M_mgc_2),axis=1)
+
+    # Read and concatenate fsizes and rmidAU
+    for i in range(1,Nzones+1):
+        if i==1:
+            r_array=func_fsize(i)[0]
+            M_mgc_full=func_fsize(i)[1]
+        else:
+            r_array=np.concatenate((r_array,func_fsize(i)[0]))
+            M_mgc_full=np.concatenate((M_mgc_full,func_fsize(i)[1]),axis=1)
+
+    """
+    rmidAU_1, M_mgc_1 = func_fsize(1)[0], func_fsize(1)[1]
+    rmidAU_2, M_mgc_2 = func_fsize(2)[0], func_fsize(2)[1]
+
     r_array=np.concatenate((rmidAU_1,rmidAU_2))
+    M_mgc_full=np.concatenate((M_mgc_1,M_mgc_2),axis=1)
+    """
+
 
     # Read ProDiMo grid. This steps requires prodimopy!
     model_prodimo=read_prodimo()
     r_array_p=np.reshape(model_prodimo.x[:,0:1],model_prodimo.x.shape[0])   # au
-    z_matrix=model_prodimo.z                             # au, dim:len(r)*len(z)
+    z_matrix=model_prodimo.z                                                # au, dim:len(r)*len(z)
+
 
     # Declaring and filling in M_pgc_full matrix for ProDiMo. Note that
     # composition is initialized to an array of ones.

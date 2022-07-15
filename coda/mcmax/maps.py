@@ -239,9 +239,10 @@ def create_maps(model,fieldname,cpd=None):
     Stores the three-dimensional map of every supported MCMax3D quantity
     to be plotted or analyzed with other routines.
 
-    Let op!
-    * The grid resolution in each zone of the PPD must be the same.
-    * Only one CPD zone is supported.
+    Limitations
+    ------------
+    *   The grid resolution in each zone of the PPD must be the same.
+    *   Only one CPD zone is supported.
     """
 
     if fieldname!="amean":
