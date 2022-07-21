@@ -204,7 +204,7 @@ def convert_comp(fc,porosity,qtype) :
 
     Parameters
     ----------
-    fc: fraction of carbon.
+    fc: fraction of carbon (either per volume or per mass, depending on your needs).
 
     porosity: the fraction of vaccum the grain is made of. If the amount of
         vacuum is say 10%, then you must enter porosity=0.1.
@@ -233,7 +233,7 @@ def convert_comp(fc,porosity,qtype) :
         FsiV=(1-porosity)*(fcV/fsiV+1)**(-1)
         FcV=(fcV/fsiV)*FsiV
 
-        print("\nThe correspondent ProDiMo quantities are:")
+        print("\nThe correspondent ProDiMo quantities (per volume) are:")
         print("FsiV=%.15f"%(FsiV))
         print("FcV=%.15f"%(FcV))
         print("FsiV+FcV+porosity=",FsiV+FcV+porosity)
@@ -250,7 +250,7 @@ def convert_comp(fc,porosity,qtype) :
         fcM=(1-(rho_si/rho_c)*(1-fcV**-1))**(-1)
         fsiM=1-fcM
 
-        print("\nThe correspondent MCMax3D quantities are:")
+        print("\nThe correspondent MCMax3D quantities (per mass) are:")
         print("fcM=%.15f"%(fcM))
         print("fsiM=%.15f"%(fsiM))
         print("fsiM+fcM=%.15f"%(fsiM+fcM))
