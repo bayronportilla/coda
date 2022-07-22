@@ -792,17 +792,21 @@ def Rhill(ap,Mp,Ms):
 
 
 def iposition(PA_disk,ri,PAi):
+
     '''
+
     This routine returns the x,y values for the position of a
     planet to be included in the MCMax3D input file such that the
     planet gets correclty positionated in the output image.
 
     IMPORTANT: the phi value in the Image.out file must be zero.
 
-    PA_disk: the position angle of the disk measured from
-    north to east in deg.
-    ri: radial separation (projected) of the planet in AU.
-    PAi: position angle (projected) of the planet in deg.
+    Parameters
+    ----------
+    PA_disk : the position angle of the disk measured from north to east. (deg)
+    ri      : radial separation (projected) of the planet. (au)
+    PAi     : position angle (projected) of the planet. (deg)
+
     '''
 
     # Poision vector of the object
