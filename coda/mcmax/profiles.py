@@ -8,7 +8,7 @@ This module is largely dependant on the Gofish package by Richard Teague.
 
 def get_profile(image,dist,pa,inc,aperture,
                 visual=None,write=None,fov=None,bunit=None,
-                pxscale=None,ebar=None,mstar=None,unit=None):
+                pxscale=None,ebar=None,mstar=None,unit=None,esurf=None):
 
     """
 
@@ -25,6 +25,10 @@ def get_profile(image,dist,pa,inc,aperture,
                 on the disk frame. For example, orientation=+10 deg means that
                 the axis of symetry of the aperture is 10 deg apart from the
                 disk's major axis (defined by the position angle argument)
+    esurf       : emitting surface file. Single column file containing the parameters
+                of the surface of emission as required by GoFish. Rows are: z0,
+                psi, r_taper, q_taper, and r_cavity. Distances in arcsec, exponents
+                are dimensionaless.
 
     Output
     ------
@@ -42,6 +46,22 @@ def get_profile(image,dist,pa,inc,aperture,
     # Load the data cube
     cube=imagecube(image,FOV=fov,bunit=bunit,pixel_scale=pxscale)
 
+    # Loading parameters for surface of emission
+    if esurf is not None:
+        params=pd.read_csv(esurf,comment='#',sep=' ',header=None)
+        z0=params.loc[0,0]          # arcsec
+        psi=params.loc[1,0]
+        r_taper=params.loc[2,0]     # arcsec
+        q_taper=params.loc[3,0]
+        r_cavity=params.loc[4,0]    # arcsec
+    else:
+        z0=None
+        psi=None
+        r_taper=None
+        q_taper=None
+        r_cavity=None
+
+    
     if cube.data.ndim==2:
 
         print("\n Working with a two-dimensional fits image \n")
@@ -57,7 +77,9 @@ def get_profile(image,dist,pa,inc,aperture,
         # Extracting radial profile with GoFish
         xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
                                           x0=0.0,y0=0.0,assume_correlated=False,
-                                          PA_min=PAmin,PA_max=PAmax,dr=dr)
+                                          PA_min=PAmin,PA_max=PAmax,dr=dr,
+                                          z0=z0,psi=psi,r_cavity=r_cavity,
+                                          r_taper=r_taper,q_taper=q_taper)
 
         # Plot the aperture?
         if visual:
@@ -73,11 +95,14 @@ def get_profile(image,dist,pa,inc,aperture,
                             inc=inc,PA=pa,mask_frame='disk',r_max=1.5)
 
             # Emitting surface
-            cube.plot_surface(ax=ax2)
+            print(z0)
+            cube.plot_surface(ax=ax2,inc=inc,PA=pa,z0=z0,psi=psi,r_cavity=r_cavity,
+                                r_taper=r_taper,q_taper=q_taper)
 
             # Image + surface
             ax3.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
-            cube.plot_surface(ax=ax3)
+            cube.plot_surface(ax=ax3,inc=inc,PA=pa,z0=z0,psi=psi,r_cavity=r_cavity,
+                                r_taper=r_taper,q_taper=q_taper)
 
 
             # Radial profile
