@@ -781,7 +781,21 @@ def Lfuv(M,R,Mdot,Rin=None):
 
     return L_fuv
 
+
 def Rhill(ap,Mp,Ms):
+
+    """
+
+    Computes the Hill's radius around a planet.
+
+    Parameters
+    ----------
+    ap  : The planet's semimajor axis (au).
+    Mp  : The planet's mass (Msun)
+    Ms  : The star's mass (Msun)
+
+    """
+
     ap=ap*u.au
     Mp=Mp*u.Msun
     Ms=Ms*u.Msun
