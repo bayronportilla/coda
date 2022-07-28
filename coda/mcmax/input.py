@@ -175,24 +175,68 @@ def upload_file(file):
     return File(x,y,name)
 
 
-def density_profile(Rin,Rout,Mdust,
-                    Rtap=None,epsilon=None,gamma=None):
-    k=10
-    N_points=2**k+1
-    Rin,Rout,Mdust=Rin*u.au,Rout*u.au,Mdust*u.Msun
-    rarray=np.linspace(Rin,Rout,N_points)
+def make_density_profile(Rin,Rout,Mdust,
+                        Rtap=None,epsilon=None,gamma=None,write=None):
+
+    """
+
+    Creates a surface density profile for a given value of the mass assuming an
+    exponential and tappered profile (see Portilla-Revelo et al. 2022, Eq.(1))
+
+    Parameters
+    ----------
+    Rin     : inner disk radius (au)
+    Rout    : outer disk radius (au)
+    Mdust   : Mass of the disk (Msun)
+    R_tap   : tappering radius of the disk (au)
+    epsilon : exponent of the linear-decay part
+    gamma   : exponent of the exponentia-decay part
+
+    Output
+    ------
+    The array for the radial distance in au and the array for the surface density
+    in g/cm2. If write=True, it saves to a file 'density.dat'. If plot=True,
+    it plots the profile.
+
+    """
+
+    # Number of sampling points
+    k = 10
+    N_points = 2**k+1
+
+    # Dealing with input arguments
+    Rin = Rin*u.au
+    Rout = Rout*u.au
+    Mdust = Mdust*u.Msun
     Rtap=Rtap*u.au if Rtap is not None else 100*u.au
     if epsilon is None:epsilon=1.0
     if gamma is None:gamma=1.0
+
+    # Array of radial points
+    rarray=np.linspace(Rin,Rout,N_points)
+
+    # Finding Sigma0
     def integrand(x):
-        return x*(Rtap.value/x)**epsilon*np.exp(-(x/Rtap.value)**(2-gamma))
-    Sigma0=(Mdust/(2*np.pi*quad(integrand,Rin.value,Rout.value)[0]*u.au**2)).to(u.g/u.cm**2)
-    Sigma=[(Sigma0.value*(Rtap/i)**epsilon*np.exp(-(i/Rtap)**(2-gamma))).value for i in rarray]
-    file=open("density.dat","w")
-    for i,j in zip(rarray,Sigma):
-        file.write("%.15e %.15e\n"%(i.value,j))
-    file.close()
-    return None
+        return x * (Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
+    Sigma0=(Mdust / (2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2))
+    Sigma0=Sigma0.to(u.g/u.cm**2)
+
+    # Sigma array
+    Sigma=[]
+    for i in range(len(rarray)):
+        r=rarray[i].value
+        Sigma.append( Sigma0.value * (Rtap.value/r)**epsilon * np.exp(-(r/Rtap.value)**(2-gamma)) )
+    Sigma=np.array(Sigma)
+    Sigma=Sigma*(u.g/u.cm**2)
+
+    # Write to a file
+    if write:
+        file=open("density.dat","w")
+        for i,j in zip(rarray,Sigma):
+            file.write("%.15e %.15e\n"%(i.value,j.value))
+        file.close()
+
+    return rarray,Sigma
 
 
 def convert_comp(fc,porosity,qtype) :
