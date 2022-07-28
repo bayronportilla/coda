@@ -912,3 +912,56 @@ def convert_flux(path_to_file,output_file_name):
     for i in range(0,len(x_array)):
         file.write('%.15e %.15e\n'%(x_array[i],y_array[i]))
     return file
+
+
+def Fnu_disk(r,wl,Temp,Sigma,kabs,d,inc):
+
+    """
+
+    Computes the monochromatic flux from a vertically isothermal disk in LTE
+    assuming no background intensity.
+
+    Parameters
+    ----------
+    d       : distance to the source (pc) [float]
+    inc     : inclination of the disk respect to the plane of the sky (deg) [float]
+    kabs    : absorption mass opacity at that wavelength (cm2/g)
+    Temp    : temperature at each radial point (K) [array]
+    Sigma   : surface density at each radial point (g/cm2) [array]
+    wl      : wavelength at which the flux is computed (micron) [float]
+    r       : distance from the star (au) [array]
+
+    Output
+    ------
+    Monochromatic flux density in Jy
+
+    """
+
+    # Dealing with input arguments
+    wl = wl*u.micron
+    Temp = Temp*u.K
+    Sigma = Sigma*(u.g/u.cm**2)
+    kabs = kabs*(u.cm**2/u.g)
+    d = (d*u.pc).to(u.cm)
+    inc = (inc*u.deg).to(u.rad)
+    r = (r*u.au).to(u.cm)
+
+    # Computing the source function
+    bb=models.BlackBody(temperature=Temp)
+    bb_lambda=bb(wl)                                       # erg / (cm2 Hz s sr)
+
+    # Compute optical depth
+    tau=Sigma*kabs
+
+    # Computing flux
+    Rin = r[0].to(u.au)
+    Rout = r[-1].to(u.au)
+    integrand = r * bb_lambda * ( 1 - np.exp(-tau/np.cos(inc)) )
+    print("\n Integrating flux between %.3f au and %.3f au"%(Rin.value,Rout.value))
+    I = simps(integrand,r)
+    mono_flux = 2*np.pi * np.cos(inc)/(d.value)**2 * I     # erg / (cm2 Hz s)
+
+    # Manipulation of flux units
+    mono_flux = ( mono_flux*( u.erg/(u.cm**2 * u.Hz * u.s) ) ).to(u.Jy)
+
+    return mono_flux
