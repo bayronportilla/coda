@@ -2,7 +2,8 @@ from coda.mcmax.header import *
 
 '''
 
-This module is largely dependant on the Gofish package by Richard Teague.
+This module is largely dependant on the Gofish package by Richard Teague
+https://joss.theoj.org/papers/10.21105/joss.01632
 
 '''
 
@@ -20,10 +21,10 @@ def get_profile(image,dist,pa,inc,aperture,
     dist        : distance to the disk [pc] (float)
     pa          : the position angle of the disk [deg] (float)
     inc         : inclination of the disk [deg] (float)
-    aperture    : defines orientation, width, and radial stepsize of the
+    aperture    : defines orientation, angular width, and radial stepsize of the
                 aperture [deg,deg,arcsec] (list). This quantities are defined
                 on the disk frame. For example, orientation=+10 deg means that
-                the axis of symetry of the aperture is 10 deg apart from the
+                the axis of symetry of the aperture is 10 deg shifted from the
                 disk's major axis (defined by the position angle argument)
     esurf       : emitting surface file. Single column file containing the parameters
                 of the surface of emission as required by GoFish. Rows are: z0,
@@ -61,7 +62,7 @@ def get_profile(image,dist,pa,inc,aperture,
         q_taper=None
         r_cavity=None
 
-    
+
     if cube.data.ndim==2:
 
         print("\n Working with a two-dimensional fits image \n")
@@ -95,7 +96,6 @@ def get_profile(image,dist,pa,inc,aperture,
                             inc=inc,PA=pa,mask_frame='disk',r_max=1.5)
 
             # Emitting surface
-            print(z0)
             cube.plot_surface(ax=ax2,inc=inc,PA=pa,z0=z0,psi=psi,r_cavity=r_cavity,
                                 r_taper=r_taper,q_taper=q_taper)
 
