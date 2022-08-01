@@ -2,9 +2,11 @@ from coda.mcmax.header import *
 
 @dataclass
 class File:
+
     x:float
     y:float
     name:str
+
 
     def calculate_mass(self,rlim=None):
 
@@ -41,6 +43,7 @@ class File:
 
         return dust_mass
 
+
     def plot(self,xlog=None,ylog=None,style=None,
         xlabel=None,ylabel=None):
         x,y=self.x,self.y
@@ -64,10 +67,8 @@ class File:
         if ylabel is not None:
             ax.set_ylabel(r"%s"%ylabel)
 
-
-
-
         plt.show()
+
 
     def rescale_mass(self,k,rlim=None):
 
@@ -117,13 +118,17 @@ class File:
 
         return None
 
+
     def plot_MCSpec(self,unit=None):
+
         if not unit:
             x,y=self.x,self.y
             fig,ax=plt.subplots(1,1)
             ax.plot(x,y)
             ax.set(xscale="log",yscale="log")
             plt.show()
+
+        return None
 
 
 def get_size_distribution(model):
@@ -965,3 +970,25 @@ def Fnu_disk(r,wl,Temp,Sigma,kabs,d,inc):
     mono_flux = ( mono_flux*( u.erg/(u.cm**2 * u.Hz * u.s) ) ).to(u.Jy)
 
     return mono_flux
+
+
+def brightness_temperature_equiv(I,nu0,bmaj,bmin):
+
+    """
+
+    Converts intensity from mJy/beam to K.
+
+    Parameters
+    ----------
+    I       : flux. (mJy/beam) [float].
+    nu0     : rest frequency. (Hz) [float].
+    bmaj    : beam's major axis. (arcsec) [float].
+    bmin    : beam's minor axis. (arcsec) [float].
+
+    """
+
+    I=I/1e3                                     # Flux in Jy/beam
+    nu0=nu0/1e9                                 # nu0 in GHz
+    value=1.222e6 * I/(nu0**2 * bmaj * bmin)    # Tb in K
+
+    return value
