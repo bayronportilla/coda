@@ -62,6 +62,14 @@ def get_profile(image,dist,pa,inc,aperture,
         q_taper=None
         r_cavity=None
 
+    # Parametrized surface of emission
+    def Z(r):                       # r is in arcsec
+        if esurf is not None:
+            num = z0 * (r-r_cavity)**psi * np.exp(-((r-r_cavity)/r_taper)**q_taper)
+            value = num/r
+        else:
+            value = np.zeros(len(r))
+        return value
 
     if cube.data.ndim==2:
 
@@ -88,7 +96,7 @@ def get_profile(image,dist,pa,inc,aperture,
             vmax=np.percentile(cube.data,99)
             vmin=np.percentile(cube.data,1)
 
-            fig,((ax1,ax2),(ax3,ax4))=plt.subplots(2,2,figsize=(8,8))
+            fig,((ax1,ax2,ax5),(ax3,ax4,ax6))=plt.subplots(2,3,figsize=(11,7))
 
             # Image with mask
             ax1.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
@@ -103,6 +111,14 @@ def get_profile(image,dist,pa,inc,aperture,
             ax3.imshow(cube.data,origin='lower',extent=cube.extent,vmin=vmin,vmax=vmax)
             cube.plot_surface(ax=ax3,inc=inc,PA=pa,z0=z0,psi=psi,r_cavity=r_cavity,
                                 r_taper=r_taper,q_taper=q_taper)
+
+            # Emitting surface one dimensional profile
+            r_array = np.linspace(xm[0],xm[-1],100)
+            Z_array = Z(r_array)
+            ax5.plot(r_array*dist,Z_array,".")
+            ax5.set_xlabel("distance (au)")
+            ax5.set_ylabel("z/r")
+
 
 
             # Radial profile
