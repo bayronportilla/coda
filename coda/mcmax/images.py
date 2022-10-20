@@ -17,6 +17,7 @@ Example
 >>> importlib.reload(coda.mcmax.images)
 >>> im=images.Image('../run064/LINE_3D_005.fits.rot.conv.line.mom0.Tb.fits')
 >>> im.visualize()
+
 """
 
 @dataclass
@@ -33,7 +34,6 @@ class Cube:
         hdu     = fits.open(self.name)
         data    = hdu[0].data
         wcs     = WCS(hdu[0].header)
-
 
         c = SkyCoord('04h32m00.00s', '+24d00m00s', frame='icrs')
 
@@ -62,12 +62,80 @@ class Cube:
             linewidth=5,alpha=0.2,
             transform=ax.get_transform('icrs'))
 
-
-
         ax.add_patch(e)
 
         #ax.plot(c)
         #ax.plot(c)
         plt.show()
 
-        return data
+        return None
+
+
+    def add_keyword(self,keyfile):
+
+        """
+
+        Operations on header file
+
+        file  :keyword,value,comment file
+
+        """
+
+        #fits.info(self.name)
+
+        # Reading keyword file into pandas data frame
+        df = pd.read_csv(keyfile,header=None)
+
+        hdu     = fits.open(self.name)
+        hdr     = hdu[0].header
+
+        #print(df)
+
+        print(hdr)
+
+
+        #print(keyval.shape)
+        #print(keyval)
+
+        for row in df.itertuples():
+            # row[1]: keyword
+            # row[2]: value
+            # row[3]: comment
+            if row[1] in ('CRVAL1','CRVAL2','CDELT1','CDELT2','PC1_1','PC2_1','PC3_1','PC1_2','PC2_2','PC3_2','P_DIST'):
+                fits.setval(self.name,row[1],value=float(row[2]),comment=row[3])
+            elif row[1] in ('CRPIX1','CRPIX2'):
+                fits.setval(self.name,row[1],value=int(row[2]),comment=row[3])
+            else:
+                fits.setval(self.name,row[1],value=row[2],comment=row[3])
+
+
+
+
+
+
+
+        #for i in range(df[0]):
+        #print(df[])
+
+        """
+        for i in range(keyval.shape[0]):
+            print(keyval[i])
+        """
+
+
+
+
+
+
+
+        #print(hdu[0].header)
+
+
+
+
+
+
+
+
+
+        return None
