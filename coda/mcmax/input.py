@@ -997,3 +997,46 @@ def brightness_temperature_equiv(I,nu0,bmaj,bmin):
     value=1.222e6 * I/(nu0**2 * bmaj * bmin)    # Tb in K
 
     return value
+
+
+def thin_scale(d,Teq,wl,kabs,inc,Mdust=None,flux=None):
+
+    """
+
+    Parameters
+    ----------
+    d       : Distance to source. (pc) [float].
+    inc     : Inclination of the source. (deg) [float].
+    Teq     : Dust equilibrium temperature. (K) [float].
+    wl      : Wavelength. (micron) [float].
+    kabs    : Absportion opacity. (cm^2/g) [float].
+    Mdust   : Disk's mass. (Msun) [float].
+    flux    : Sub-mm flux. (Jy) [float].
+
+    """
+
+    # Handling units
+    d       = d*u.pc
+    inc     = (inc*u.deg).to(u.rad)
+    Teq     = Teq*u.K
+    wl      = wl*u.micron
+    kabs    = kabs*(u.cm**2/u.g)
+
+    # Black body model
+    bb=models.BlackBody(temperature=Teq)
+
+    if Mdust is not None:
+
+        print("\n Computing flux \n")
+        Mdust   = Mdust*u.Msun
+        value   = Mdust*kabs*bb(wl)/(d**2*np.cos(inc))
+
+
+    if flux is not None:
+
+        print("\n Computing mass \n")
+        flux    = flux*u.Jy
+        value   = flux*d**2*np.cos(inc)/(kabs* (bb(wl)*1*u.sr) )
+        value   = value.to(u.Msun)
+
+    return value
