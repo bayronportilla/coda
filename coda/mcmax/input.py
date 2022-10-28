@@ -70,7 +70,8 @@ class File:
         plt.show()
 
 
-    def rescale_mass(self,k,rlim=None):
+    def rescale_mass(self,k=None,rlim=None,files=None,visual=None):
+
 
         """
 
@@ -82,20 +83,24 @@ class File:
         k       : rescaling factor. [dimensionless] (float).
         rlim    : (rmin,rmax) to only rescale the points with rmin <= r <= rmax.
                 If rlim is None, rescale the entire profile. [au,au] (tuple).
+        files   :
 
         """
 
         x=(self.x*u.au).to(u.cm).value
         y=self.y
 
+
         Mold=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
 
-        # Rescale the whole profile
-        if rlim is None:
+
+        # Rescale the whole profile by a constant factor
+        if k is not None and rlim is None:
             ynew=k*y
 
-        # Rescale between rmin and rmax
-        if rlim is not None:
+
+        # Rescale between rmin and rmax by a constant factor
+        if k is not None and rlim is not None:
             rmin,rmax=rlim
             ynew=[]
             for i in range(len(self.x)):
@@ -103,6 +108,72 @@ class File:
                     ynew+=[k*y[i]]
                 else:
                     ynew+=[1*y[i]]
+
+
+        # Point-by-point rescaling using an input file
+        if files is not None:
+
+            # Load data
+            data_file_1 = np.loadtxt(files[0])
+            data_file_2 = np.loadtxt(files[1])
+
+            x_file_1 = np.reshape(data_file_1[:,0],data_file_1.shape[0])
+            y_file_1 = np.reshape(data_file_1[:,1],data_file_1.shape[0])
+            x_file_2 = np.reshape(data_file_2[:,0],data_file_2.shape[0])
+            y_file_2 = np.reshape(data_file_2[:,1],data_file_2.shape[0])
+
+            # Interpolate files (linearly) onto model's grid
+            y_file_1_interp = np.interp(self.x, x_file_1, y_file_1)
+            y_file_2_interp = np.interp(self.x, x_file_2, y_file_2)
+
+            '''
+            ############################################################
+            # Determine limits for interpolation
+            if min(r_obs)<min(r_mod):
+                r_min=min(r_obs)
+            else:
+                r_min=min(r_mod)
+
+            if max(r_obs)>max(r_mod):
+                r_max=max(r_obs)
+            else:
+                r_max=max(r_mod)
+            '''
+
+            # Do a check?
+            if visual is True:
+                #r=np.linspace(self.x.min(),self.x.max(),100)
+                ms=1
+                plt.plot(x_file_1,y_file_1,'+',markersize=5,label='$%s$ input'%files[0],color='black')
+                plt.plot(self.x,y_file_1_interp,'-',markersize=ms,label='$%s$ interpolated'%files[0],color='blue')
+
+                plt.plot(x_file_2,y_file_2,'+',markersize=5,label='$%s$ input'%files[1],color='red')
+                plt.plot(self.x,y_file_2_interp,'-',markersize=ms,label='$%s$ interpolated'%files[1],color='green')
+
+                #plt.plot(self.x,self.y,label='model',color='red')
+                plt.legend(frameon=False)
+                plt.show()
+
+
+            # Built R coefficients
+            R_array = abs(y_file_1_interp/y_file_2_interp)
+
+
+            # Built new density profile
+            ynew=[i*j for i,j in zip(self.y,R_array)]
+
+
+
+            ############################################################
+            # Plot final result
+            plt.plot(self.x,self.y,label='initial density')
+            plt.plot(self.x,ynew,label='corrected density')
+            plt.legend()
+
+            plt.yscale('log')
+            plt.show()
+
+
 
         Mnew=(2*np.pi*simps(x*ynew,x)*u.g).to(u.Msun)
 
