@@ -70,7 +70,7 @@ class File:
         plt.show()
 
 
-    def rescale_mass(self,k=None,rlim=None,files=None,visual=None):
+    def rescale_mass(self,k=None,rlim=None,files=None,visual=None,reeplace=None):
 
 
         """
@@ -101,16 +101,48 @@ class File:
 
         # Rescale between rmin and rmax by a constant factor
         if k is not None and rlim is not None:
-            rmin,rmax=rlim
-            ynew=[]
-            for i in range(len(self.x)):
-                if self.x[i]>=rmin and self.x[i]<=rmax:
-                    ynew+=[k*y[i]]
-                else:
-                    ynew+=[1*y[i]]
+            """
+            try:
+                if reeplace is False:
+                    rmin,rmax=rlim
+                    ynew=[]
+                    for i in range(len(self.x)):
+                        if self.x[i]>=rmin and self.x[i]<=rmax:
+                            ynew+=[k*y[i]]
+                        else:
+                            ynew+=[1*y[i]]
+
+                elif reeplace is True:
+                    rmin,rmax=rlim
+                    ynew=[]
+                    for i in range(len(self.x)):
+                        if self.x[i]>=rmin and self.x[i]<=rmax:
+                            ynew+=[k]
+                        else:
+                            ynew+=[1*y[i]]
+            except:
+                print("No 'reeplace' found. Assuming reeplace = False")
+            """
+            if reeplace is True:
+                rmin,rmax=rlim
+                ynew=[]
+                for i in range(len(self.x)):
+                    if self.x[i]>=rmin and self.x[i]<=rmax:
+                        ynew+=[k]
+                    else:
+                        ynew+=[1*y[i]]
+
+            else:
+                rmin,rmax=rlim
+                ynew=[]
+                for i in range(len(self.x)):
+                    if self.x[i]>=rmin and self.x[i]<=rmax:
+                        ynew+=[k*y[i]]
+                    else:
+                        ynew+=[1*y[i]]
 
 
-        # Point-by-point rescaling using an input file
+        # Point-by-point rescaling using two input files
         if files is not None:
 
             # Load data
@@ -161,7 +193,6 @@ class File:
 
             # Built new density profile
             ynew=[i*j for i,j in zip(self.y,R_array)]
-
 
 
             ############################################################
