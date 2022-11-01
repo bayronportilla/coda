@@ -70,7 +70,7 @@ class File:
         plt.show()
 
 
-    def rescale_mass(self,k=None,rlim=None,files=None,visual=None,reeplace=None):
+    def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None):
 
 
         """
@@ -80,10 +80,16 @@ class File:
         Parameters
         ----------
 
-        k       : rescaling factor. [dimensionless] (float).
-        rlim    : (rmin,rmax) to only rescale the points with rmin <= r <= rmax.
-                If rlim is None, rescale the entire profile. [au,au] (tuple).
-        files   :
+        k           : rescaling factor. [dimensionless] (float).
+        rlim        : (rmin,rmax) to only rescale the points with rmin <= r <= rmax.
+                    If rlim is None, rescale the entire profile. [au,au] (tuple).
+        files       : This performs a point-by-point rescaling of the density profile
+                    according to the ratio of R=file[0]/file[1]. It uses a linear
+                    interpolator to infer the values of the files at each self.x point.
+                    If out of bounds interpolation is required, it uses the extreme
+                    values of the files as boundary conditions. (list).
+        reeplace    : It has to be used alongside k and rlim. If True, it reeplaces
+                    all the values between rlim by k.
 
         """
 
@@ -158,38 +164,20 @@ class File:
             y_file_1_interp = np.interp(self.x, x_file_1, y_file_1)
             y_file_2_interp = np.interp(self.x, x_file_2, y_file_2)
 
-            '''
-            ############################################################
-            # Determine limits for interpolation
-            if min(r_obs)<min(r_mod):
-                r_min=min(r_obs)
-            else:
-                r_min=min(r_mod)
-
-            if max(r_obs)>max(r_mod):
-                r_max=max(r_obs)
-            else:
-                r_max=max(r_mod)
-            '''
-
             # Do a check?
-            if visual is True:
-                #r=np.linspace(self.x.min(),self.x.max(),100)
-                ms=1
-                plt.plot(x_file_1,y_file_1,'+',markersize=5,label='$%s$ input'%files[0],color='black')
-                plt.plot(self.x,y_file_1_interp,'-',markersize=ms,label='$%s$ interpolated'%files[0],color='blue')
+            ms=1
+            plt.plot(x_file_1,y_file_1,'+',markersize=5,label='$%s$ input'%files[0],color='black')
+            plt.plot(self.x,y_file_1_interp,'-',markersize=ms,label='$%s$ interpolated'%files[0],color='blue')
 
-                plt.plot(x_file_2,y_file_2,'+',markersize=5,label='$%s$ input'%files[1],color='red')
-                plt.plot(self.x,y_file_2_interp,'-',markersize=ms,label='$%s$ interpolated'%files[1],color='green')
+            plt.plot(x_file_2,y_file_2,'+',markersize=5,label='$%s$ input'%files[1],color='red')
+            plt.plot(self.x,y_file_2_interp,'-',markersize=ms,label='$%s$ interpolated'%files[1],color='green')
 
-                #plt.plot(self.x,self.y,label='model',color='red')
-                plt.legend(frameon=False)
-                plt.show()
-
+            #plt.plot(self.x,self.y,label='model',color='red')
+            plt.legend(frameon=False)
+            plt.show()
 
             # Built R coefficients
             R_array = abs(y_file_1_interp/y_file_2_interp)
-
 
             # Built new density profile
             ynew=[i*j for i,j in zip(self.y,R_array)]
