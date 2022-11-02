@@ -70,7 +70,8 @@ class File:
         plt.show()
 
 
-    def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None):
+    def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
+                    ylim=None):
 
 
         """
@@ -90,6 +91,7 @@ class File:
                     values of the files as boundary conditions. (list).
         reeplace    : It has to be used alongside k and rlim. If True, it reeplaces
                     all the values between rlim by k.
+        type        :
 
         """
 
@@ -182,8 +184,6 @@ class File:
             # Built new density profile
             ynew=[i*j for i,j in zip(self.y,R_array)]
 
-
-            ############################################################
             # Plot final result
             plt.plot(self.x,self.y,label='initial density')
             plt.plot(self.x,ynew,label='corrected density')
@@ -191,6 +191,17 @@ class File:
 
             plt.yscale('log')
             plt.show()
+
+        # Reeplace points by a straight line
+        if type=='linear':
+            x0,x1 = rlim
+            y0,y1 = ylim
+            print(x0,x1)
+            print(y0,y1)
+            return None
+
+        sys.exit()
+
 
 
 
