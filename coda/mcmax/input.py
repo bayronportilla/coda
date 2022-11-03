@@ -149,7 +149,6 @@ class File:
                     else:
                         ynew+=[1*y[i]]
 
-
         # Point-by-point rescaling using two input files
         if files is not None:
 
@@ -194,16 +193,18 @@ class File:
 
         # Reeplace points by a straight line
         if type=='linear':
-            x0,x1 = rlim
-            y0,y1 = ylim
-            print(x0,x1)
-            print(y0,y1)
-            return None
+            print(rlim)
+            rmin,rmax   = rlim
+            ymin,ymax   = ylim
+            m           = (ymax-ymin)/(rmax-rmin)
+            b           = ymin-m*rmin
 
-        sys.exit()
-
-
-
+            ynew=[]
+            for i in range(len(self.x)):
+                if self.x[i]>=rmin and self.x[i]<=rmax:
+                    ynew+=[m*self.x[i]+b]
+                else:
+                    ynew+=[1*y[i]]
 
         Mnew=(2*np.pi*simps(x*ynew,x)*u.g).to(u.Msun)
 
