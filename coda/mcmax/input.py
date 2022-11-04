@@ -71,7 +71,7 @@ class File:
 
 
     def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
-                    ylim=None):
+                    ylim=None,mass=None):
 
 
         """
@@ -205,6 +205,24 @@ class File:
                     ynew+=[m*self.x[i]+b]
                 else:
                     ynew+=[1*y[i]]
+
+        if type=='exponential':
+
+            try:
+                rmin,rmax   = rlim
+                profile     = make_density_profile(rmin,rmax,mass)
+                xprof       = profile[0].value
+                yprof       = profile[1].value
+
+                ynew=[]
+                for i in range(len(self.x)):
+                    if self.x[i]>=rmin and self.x[i]<=rmax:
+                        ynew+=[np.interp(self.x[i],xprof,yprof)]
+                    else:
+                        ynew+=[1*y[i]]
+
+            except:
+                print('\n mass argument must be passed')
 
         Mnew=(2*np.pi*simps(x*ynew,x)*u.g).to(u.Msun)
 
