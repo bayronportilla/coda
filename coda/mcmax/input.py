@@ -12,7 +12,7 @@ class File:
 
         """
 
-        Integrate the density profile to find the mass.
+        Integrate the density profile to find the mass (for gas or dust).
 
         Parameters
         ----------
@@ -37,11 +37,11 @@ class File:
                     xint.append(i)
                     yint.append(j)
             xint,yint=np.array(xint),np.array(yint)
-            dust_mass=(2*np.pi*simps(xint*yint,xint)*u.g).to(u.Msun)
+            mass=(2*np.pi*simps(xint*yint,xint)*u.g).to(u.Msun)
         else:
-            dust_mass=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
+            mass=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
 
-        return dust_mass
+        return mass
 
 
     def plot(self,xlog=None,ylog=None,style=None,
