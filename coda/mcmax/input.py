@@ -71,7 +71,7 @@ class File:
 
 
     def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
-                    ylim=None,mass=None):
+                    ylim=None,mass=None,epsilon=None,gamma=None):
 
 
         """
@@ -210,7 +210,7 @@ class File:
 
             try:
                 rmin,rmax   = rlim
-                profile     = make_density_profile(rmin,rmax,mass)
+                profile     = make_density_profile(rmin,rmax,mass,epsilon=epsilon,gamma=gamma)
                 xprof       = profile[0].value
                 yprof       = profile[1].value
 
@@ -1122,6 +1122,9 @@ def brightness_temperature_equiv(I,nu0,bmaj,bmin):
 def thin_scale(d,Teq,wl,kabs,inc,Mdust=None,flux=None):
 
     """
+
+    This rountine computes mass from flux and vice-versa assuming optically
+    thin emission.
 
     Parameters
     ----------
