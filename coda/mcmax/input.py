@@ -1163,3 +1163,65 @@ def thin_scale(d,Teq,wl,kabs,inc,Mdust=None,flux=None):
         value   = value.to(u.Msun)
 
     return value
+
+
+def Tdust(Tsource,wl,kabs):
+
+    """
+
+    Computes the equilibrium temperature of a distribution of dust grains assuming
+    radiation heating and black-body cooling.
+
+    Paramters:
+    ----------
+    Tsource       : Effective temperature of the source of illumination. (K) [float].
+    wl            : Wavelenght array. (micron) [array].
+    kabs          : Absoprtion opacity array. (cm2/g) [array].
+
+    Ouput:
+    ------
+
+    """
+
+    # Unit manipulation
+    #Tsource = Tsource*u.K
+
+    # Absorption opacity averaged over illumination source's radiation field
+    def kabs_ave(T,kabs):
+
+        # Numerical integration
+        bb=models.BlackBody(temperature=T*u.K)
+        bb_lambda=bb(wave*u.micron).value                           # erg / (cm2 Hz s sr)
+        y=bb_lambda*kabs                                            # erg / (cm2 Hz s sr g)
+        I=integrate.simpson(y,wave)
+        kabs_ave=np.pi/(c.sigma_sb.cgs.value*T.value**4) * I    # cm2 / g
+
+        return kabs_ave
+
+    """
+    # Absorption opacity averaged over illumination source's radiation field
+    def kabs_ave_source(kabs):
+
+        # Numerical integration
+        bb=models.BlackBody(temperature=Tstar)
+        bb_lambda=bb(wave*u.micron).value                           # erg / (cm2 Hz s sr)
+        y=bb_lambda*kabs                                            # erg / (cm2 Hz s sr g)
+        I=integrate.simpson(y,wave)
+        kabs_ave=np.pi/(c.sigma_sb.cgs.value*Tstar.value**4) * I    # cm2 / g
+
+        return kabs_ave
+
+    # Absorption opacity averaged over Planck spectrum
+    def kabs_ave_planck(Td,kabs):
+
+        # Numerical integration
+        bb=models.BlackBody(temperature=Td*u.K)
+        bb_lambda=bb(wave*u.micron).value                                   # erg / (cm2 Hz s sr)
+        y=bb_lambda*kabs                                                    # erg / (cm2 Hz s sr g)
+        I=integrate.simpson(y,wave)
+        kabs_ave=np.pi/(c.sigma_sb.cgs.value*Td**4) * I                     # cm2 / g
+
+        return kabs_ave
+    """
+
+    return None
