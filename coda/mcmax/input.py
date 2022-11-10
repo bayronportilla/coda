@@ -1165,35 +1165,40 @@ def thin_scale(d,Teq,wl,kabs,inc,Mdust=None,flux=None):
     return value
 
 
-def Tdust(Tsource,wl,kabs):
+def Tdust(Tsource,Rsource,d,wl,kabs):
 
     """
 
     Computes the equilibrium temperature of a distribution of dust grains assuming
-    radiation heating and black-body cooling.
+    radiation heating and black-body cooling. The illumination sources is a black
+    body with effective temperature Tsource and size Rsource. It is assumed that
+    the location where the equilibrium temperature is being calculated is r >> Rsource.
 
     Paramters:
     ----------
-    Tsource       : Effective temperature of the source of illumination. (K) [float].
-    wl            : Wavelenght array. (micron) [array].
-    kabs          : Absoprtion opacity array. (cm2/g) [array].
+    Tsource         : Effective temperature of the source of illumination. (K) [float].
+    Rsource         : Radius of the illumination source. (Rsun) [float].
+    d               : distance from the illumination source. (au) [float].
+    wl              : Wavelenght array over which the opacity is defined. (micron) [array].
+    kabs            : Absoprtion opacity array. (cm2/g) [array].
 
     Ouput:
     ------
 
     """
 
-    # Unit manipulation
-    #Tsource = Tsource*u.K
+    # Unit assignation
+    Rsource     = Rsource*u.Rsun
+    d           = d*u.au
 
     # Absorption opacity averaged over illumination source's radiation field
     def kabs_ave(T,kabs):
 
         # Numerical integration
         bb=models.BlackBody(temperature=T*u.K)
-        bb_lambda=bb(wave*u.micron).value                           # erg / (cm2 Hz s sr)
+        bb_lambda=bb(wl*u.micron).value                           # erg / (cm2 Hz s sr)
         y=bb_lambda*kabs                                            # erg / (cm2 Hz s sr g)
-        I=integrate.simpson(y,wave)
+        I=integrate.simpson(y,wl)
         kabs_ave=np.pi/(c.sigma_sb.cgs.value*T.value**4) * I    # cm2 / g
 
         return kabs_ave
@@ -1224,4 +1229,12 @@ def Tdust(Tsource,wl,kabs):
         return kabs_ave
     """
 
-    return None
+    # The equation to solve
+    def f(x,kabs):
+        frad=(0.5*Rsource/d).to(u.au/u.au)
+        return x**4 - frad**2 * kabs_ave(Tsource,kabs)/kabs_ave(x,kabs) * Tsource.value**4
+
+    # Using Newton-Raphson method to find equilibrum temperature
+    Td_sol = optimize.newton(f,20,args=(kabs))
+
+    return Td_sol
