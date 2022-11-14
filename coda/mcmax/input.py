@@ -71,7 +71,7 @@ class File:
 
 
     def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
-                    ylim=None,mass=None,epsilon=None,gamma=None):
+                    ylim=None,mass=None,epsilon=None,gamma=None,sigma=None):
 
 
         """
@@ -193,7 +193,7 @@ class File:
 
         # Reeplace points by a straight line
         if type=='linear':
-            print(rlim)
+
             rmin,rmax   = rlim
             ymin,ymax   = ylim
             m           = (ymax-ymin)/(rmax-rmin)
@@ -223,6 +223,23 @@ class File:
 
             except:
                 print('\n mass argument must be passed')
+
+        if type=='gaussian':
+
+            rmin,rmax   = rlim
+            ymin,ymax   = ylim
+
+            r_gauss     = np.linspace(rmin,rmax,100)
+            y_gauss     = norm(loc=rmax,scale=sigma).pdf(r_gauss)
+            y_gauss     = y_gauss/y_gauss.max()
+
+            # Normalize to ymax and then multiply by gaussian PDF.
+            ynew=[]
+            for i in range(len(self.x)):
+                if self.x[i]>=rmin and self.x[i]<=rmax:
+                    ynew+=[ymax*np.interp(self.x[i],r_gauss,y_gauss)]
+                else:
+                    ynew+=[1*y[i]]
 
         Mnew=(2*np.pi*simps(x*ynew,x)*u.g).to(u.Msun)
 
