@@ -71,7 +71,7 @@ class File:
 
 
     def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
-                    ylim=None,mass=None,epsilon=None,gamma=None,sigma=None):
+                    ylim=None,mass=None,epsilon=None,gamma=None,sigma=None,pivot=None):
 
 
         """
@@ -224,20 +224,31 @@ class File:
             except:
                 print('\n mass argument must be passed')
 
+        # Gaussian: usually helpful when one of the pivots has y~0
         if type=='gaussian':
 
-            rmin,rmax   = rlim
-            ymin,ymax   = ylim
+            rmin,rmax       = rlim
+            ymin,ymax       = ylim
 
             r_gauss     = np.linspace(rmin,rmax,100)
-            y_gauss     = norm(loc=rmax,scale=sigma).pdf(r_gauss)
+
+            if pivot=='min':
+                y_gauss = norm(loc=rmin,scale=sigma).pdf(r_gauss)
+            elif pivot=='max':
+                y_gauss = norm(loc=rmax,scale=sigma).pdf(r_gauss)
             y_gauss     = y_gauss/y_gauss.max()
+
+            plt.plot(r_gauss,y_gauss)
+            plt.show()
 
             # Normalize to ymax and then multiply by gaussian PDF.
             ynew=[]
             for i in range(len(self.x)):
                 if self.x[i]>=rmin and self.x[i]<=rmax:
-                    ynew+=[ymax*np.interp(self.x[i],r_gauss,y_gauss)]
+                    if pivot=='min':
+                        ynew+=[ymin*np.interp(self.x[i],r_gauss,y_gauss)]
+                    elif pivot=='max':
+                        ynew+=[ymax*np.interp(self.x[i],r_gauss,y_gauss)]
                 else:
                     ynew+=[1*y[i]]
 
