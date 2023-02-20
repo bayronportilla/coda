@@ -178,19 +178,25 @@ class Map:
         phi = np.reshape(phi[:,0],phi.shape[0])
 
         if phival is not None:
+            phi_array   = (phi*u.rad).to(u.deg)
+            index       = np.argmin(np.abs(phi_array.value-phival))
+
             f_cut = []
             r_cut = []
+
+            print("\n Extracting radial temperature at phi=%.2f"%(phi_array[index].value))
+
             for i in range(0,len(r)):
                 r_cut.append(r[i])
-                f_cut.append(f[0,i])
+                f_cut.append(f[index,i])
+
             r_cut=np.array(r_cut)
             f_cut=np.array(f_cut)
 
-        plt.plot(r_cut,f_cut,'+')
-        plt.show()
+            ''' Plotting '''
+            ax=axes1D(r_cut,10**f_cut,xlog,ylog,xlabel,ylabel,title)
+            plt.show()
 
-
-        sys.exit()
         def plot_statistics(matrix,array,F,visual=None):
             median,mad=np.median(array),median_absolute_deviation(array)
             if visual is True:
@@ -233,6 +239,11 @@ class Map:
                 file.write("%.15e %.15e\n"%(i,j))
             file.close()
 
+            ''' Plotting '''
+            ax=axes1D(r_ave,10**f_ave,xlog,ylog,xlabel,ylabel,title)
+            plt.show()
+
+
         if fullave:
             std_array=[np.std(np.reshape(f[:,i:i+1],f.shape[0])) for i in range(0,f.shape[1])]
             fig=plot_statistics(f,std_array,0.0,visual=True)
@@ -247,9 +258,11 @@ class Map:
                 file.write("%.15e %.15e\n"%(i,j))
             file.close()
 
-        ''' Plotting '''
-        ax=axes1D(r_ave,10**f_ave,xlog,ylog,xlabel,ylabel,title)
-        plt.show()
+            ''' Plotting '''
+            ax=axes1D(r_ave,10**f_ave,xlog,ylog,xlabel,ylabel,title)
+            plt.show()
+
+
 
         return None
 
