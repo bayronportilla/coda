@@ -190,7 +190,7 @@ class File:
 
             plt.yscale('log')
             plt.show()
-
+        '''
         # Reeplace points by a straight line
         if type=='linear':
 
@@ -203,6 +203,35 @@ class File:
             for i in range(len(self.x)):
                 if self.x[i]>=rmin and self.x[i]<=rmax:
                     ynew+=[m*self.x[i]+b]
+                else:
+                    ynew+=[1*y[i]]
+        '''
+        # Reeplace points by a straight line
+        if type=='linear':
+
+            rmin,rmax   = rlim
+            ymin,ymax   = ylim
+
+            if pivot=='min':
+                m  = (k-1.0)/(rmax-rmin)
+                b  = 1.0-m*rmin
+
+            elif pivot=='max':
+                m  = (1.0-k)/(rmax-rmin)
+                b  = 1.0-m*rmax
+
+            """
+            rlinear = np.linspace(rmin,rmax,100)
+            ylinear = m*rlinear+b
+
+            plt.plot(rlinear,ylinear)
+            plt.show()
+            """
+
+            ynew=[]
+            for i in range(len(self.x)):
+                if self.x[i]>=rmin and self.x[i]<=rmax:
+                    ynew+=[y[i]*(m*self.x[i]+b)]
                 else:
                     ynew+=[1*y[i]]
 
@@ -237,9 +266,6 @@ class File:
             elif pivot=='max':
                 y_gauss = norm(loc=rmax,scale=sigma).pdf(r_gauss)
             y_gauss     = y_gauss/y_gauss.max()
-
-            plt.plot(r_gauss,y_gauss)
-            plt.show()
 
             # Normalize to ymax and then multiply by gaussian PDF.
             ynew=[]

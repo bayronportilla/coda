@@ -38,7 +38,7 @@ class Cube:
         c = SkyCoord('04h32m00.00s', '+24d00m00s', frame='icrs')
 
         d           = 113.47*u.pc   # Must be in pc
-        semiaxis    = 94           # Must be in au
+        semiaxis    = 10           # Must be in au
         inc         = 51.7*u.deg    # Inclination
 
         ecc         = np.sin( inc.to(u.rad) )
@@ -55,11 +55,11 @@ class Cube:
         fig=plt.figure()
         ax=plt.subplot(projection=wcs,slices=('x','y',0))
         ax.imshow(data[0,:,:])
-        ax.scatter(c.ra.deg,c.dec.deg,transform=ax.get_transform('icrs'))
+        #ax.scatter(c.ra.deg,c.dec.deg,transform=ax.get_transform('icrs'))
 
         e = Ellipse((c.ra.deg,c.dec.deg),2*adeg,2*bdeg,-70.4,
             edgecolor='black', facecolor='none', linestyle=':',
-            linewidth=5,alpha=0.2,
+            linewidth=1,alpha=0.2,
             transform=ax.get_transform('icrs'))
 
         ax.add_patch(e)
