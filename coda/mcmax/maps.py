@@ -1,6 +1,10 @@
 from coda.mcmax.header import *
 #plt.style.use('fancy')
 
+"""
+
+"""
+
 def axes1D(x,y,xlog=None,ylog=None,xlabel=None,
            ylabel=None,title=None):
 
@@ -56,6 +60,10 @@ class Map:
     '''
     Base class containing the reading and plotting routines of MCMax3D output
     fields.
+
+    *   Quantities in MCMax3D are stored in a three dimensional grid whose axes
+        are: [phi,theta,r]
+
 
     Accepted fieldnames are: 'temp',...
 
@@ -154,14 +162,35 @@ class Map:
 
         return None
 
-    ''' Plot the values on the midplane '''
+
+    # Plot midplane. (It supports only averaged quantities)
     def plot_midplane(self,clines=None,fname=None,log=True,ave=None,fullave=None,
-                      xlog=None,ylog=None,xlabel=None,ylabel=None,title=None):
+        phival=None,xlog=None,ylog=None,xlabel=None,ylabel=None,title=None):
 
-        """
-        At the moment, this routine only supports plotting averaged quantities
-        """
+        x   = self.x[:,int(self.x.shape[1]*0.5),:]
+        y   = self.y[:,int(self.y.shape[1]*0.5),:]
+        z   = self.z[:,int(self.z.shape[1]*0.5),:]
+        r   = self.r[:,int(self.r.shape[1]*0.5),:]
+        phi = self.phi[:,int(self.phi.shape[1]*0.5),:]
+        f   = (self.f[:,int(self.f.shape[1]*0.5),:]+self.f[:,int(self.f.shape[1]*0.5+1),:])*0.5
 
+        r   = np.reshape(r[0],r.shape[1])
+        phi = np.reshape(phi[:,0],phi.shape[0])
+
+        if phival is not None:
+            f_cut = []
+            r_cut = []
+            for i in range(0,len(r)):
+                r_cut.append(r[i])
+                f_cut.append(f[0,i])
+            r_cut=np.array(r_cut)
+            f_cut=np.array(f_cut)
+
+        plt.plot(r_cut,f_cut,'+')
+        plt.show()
+
+
+        sys.exit()
         def plot_statistics(matrix,array,F,visual=None):
             median,mad=np.median(array),median_absolute_deviation(array)
             if visual is True:
@@ -178,14 +207,6 @@ class Map:
                 return fig
             else:
                 return median,mad
-
-        x=self.x[:,int(self.x.shape[1]*0.5),:]
-        y=self.y[:,int(self.y.shape[1]*0.5),:]
-        z=self.z[:,int(self.z.shape[1]*0.5),:]
-        r=self.r[:,int(self.r.shape[1]*0.5),:]
-        phi=self.phi[:,int(self.phi.shape[1]*0.5),:]
-        f=(self.f[:,int(self.f.shape[1]*0.5),:]+self.f[:,int(self.f.shape[1]*0.5+1),:])*0.5
-        r,phi=np.reshape(r[0],r.shape[1]),np.reshape(phi[:,0:1],phi.shape[0])
 
         if ave:
             std_array=[np.std(np.reshape(f[:,i:i+1],f.shape[0])) for i in range(0,f.shape[1])]
