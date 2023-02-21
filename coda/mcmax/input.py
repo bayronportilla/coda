@@ -1292,3 +1292,56 @@ def Tdust(Tsource,Rsource,d,wl,kabs):
     Td_sol = optimize.newton(f,20,args=(kabs))
 
     return Td_sol
+
+def Td_razor(Tsource,Rsource,d):
+
+    """
+    Finds the dust temperature of a razor disk irradiated by a central star.
+    See Eq.(2.38) Armitage
+
+    Parameters:
+    -----------
+    Tsource         : Effective temperature of the source of illumination. (K) [float].
+    Rsource         : Radius of the illumination source. (Rsun) [float].
+    d               : distance from the illumination source. (au) [float].
+
+    Output:
+    -------
+
+    """
+
+    Rsource     = Rsource*u.Rsun
+    d           = d*u.au
+    R2d         = (Rsource/d).decompose().value
+
+    Tdisk = ((1/np.pi)*(np.arcsin(R2d) - (R2d)*(1-(R2d)**2)**0.5))**0.25 * Tsource
+
+    return Tdisk
+
+
+def Td_grain(Tsource,Rsource,d):
+
+    """
+    Finds the dust temperature of a single grain irradiated by a central star.
+
+    Parameters:
+    -----------
+    Tsource         : Effective temperature of the source of illumination. (K) [float].
+    Rsource         : Radius of the illumination source. (Rsun) [float].
+    d               : distance from the illumination source. (au) [float].
+
+    Output:
+    -------
+
+    """
+
+    Tsource     = Tsource*u.K
+    Rsource     = Rsource*u.Rsun
+    d           = d*u.au
+
+    Lsource     = (4*np.pi*c.sigma_sb*Rsource**2*Tsource**4)
+
+    Tgrain      = ((Lsource/(16*np.pi*c.sigma_sb*d**2))**0.25).to(u.K)
+    print(Lsource.to(u.Lsun ))
+
+    return Tgrain
