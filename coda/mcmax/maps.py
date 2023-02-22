@@ -197,6 +197,12 @@ class Map:
             ax=axes1D(r_cut,10**f_cut,xlog,ylog,xlabel,ylabel,title)
             plt.show()
 
+            # Save to file
+            file=open("field_cut_%s.dat"%(str(phival)),"w")
+            for i,j in zip(r_cut,f_cut):
+                file.write("%.15e %.15e\n"%(i,j))
+            file.close()
+
         def plot_statistics(matrix,array,F,visual=None):
             median,mad=np.median(array),median_absolute_deviation(array)
             if visual is True:
