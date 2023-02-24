@@ -200,7 +200,7 @@ class Map:
             # Save to file
             file=open("field_cut_%s.dat"%(str(phival)),"w")
             for i,j in zip(r_cut,f_cut):
-                file.write("%.15e %.15e\n"%(i,j))
+                file.write("%.15e %.15e\n"%(i,10**j))
             file.close()
 
         def plot_statistics(matrix,array,F,visual=None):
@@ -242,7 +242,7 @@ class Map:
 
             file=open("field_ave.dat","w")
             for i,j in zip(r_ave,f_ave):
-                file.write("%.15e %.15e\n"%(i,j))
+                file.write("%.15e %.15e\n"%(i,10**j))
             file.close()
 
             ''' Plotting '''
@@ -261,7 +261,7 @@ class Map:
             f_ave,r_ave=np.array(f_ave),np.array(r_ave)
             file=open("field_ave.dat","w")
             for i,j in zip(r_ave,f_ave):
-                file.write("%.15e %.15e\n"%(i,j))
+                file.write("%.15e %.15e\n"%(i,10**j))
             file.close()
 
             ''' Plotting '''
