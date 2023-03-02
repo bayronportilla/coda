@@ -1219,7 +1219,7 @@ def thin_scale(d,Teq,wl,kabs,inc,Mdust=None,flux=None):
     return value
 
 
-def Tdust(Tsource,Rsource,d,wl,kabs):
+def Tdust(Tsource,Rsource,d,nu,kabs):
 
     """
 
@@ -1233,65 +1233,43 @@ def Tdust(Tsource,Rsource,d,wl,kabs):
     Tsource         : Effective temperature of the source of illumination. (K) [float].
     Rsource         : Radius of the illumination source. (Rsun) [float].
     d               : distance from the illumination source. (au) [float].
-    wl              : Wavelenght array over which the opacity is defined. (micron) [array].
+    nu              : frequency array over which the opacity is defined. (micron) [array].
     kabs            : Absoprtion opacity array. (cm2/g) [array].
 
     Ouput:
     ------
+    Equilibriun temperature in K
 
     """
 
-    # Unit assignation
-    Rsource     = Rsource*u.Rsun
-    d           = d*u.au
 
-    # Absorption opacity averaged over illumination source's radiation field
-    def kabs_ave(T,kabs):
+    # Absorption opacity averaged over black body with effective temperature T
+    def kabs_ave(T):
 
         # Numerical integration
-        bb=models.BlackBody(temperature=T*u.K)
-        bb_lambda=bb(wl*u.micron).value                           # erg / (cm2 Hz s sr)
-        y=bb_lambda*kabs                                            # erg / (cm2 Hz s sr g)
-        I=integrate.simpson(y,wl)
-        kabs_ave=np.pi/(c.sigma_sb.cgs.value*T.value**4) * I    # cm2 / g
+        bb          = models.BlackBody(temperature=T*u.K)                               # erg / cm2 Hz s sr
+        y           = bb(nu*u.Hz)*(kabs*(u.cm**2/u.g))                                  # erg / Hz s sr g
+        I           = simpson(y,nu)                                                     # Dimensionless
+        num         = I*(u.erg/(u.s*u.sr*u.g))                                          # erg / s sr g
+        den         = (c.sigma_sb.cgs.value/np.pi * T**4)*(u.erg/(u.cm**2*u.s*u.sr ))   # erg / cm2 s sr
+        kabs_ave    = num/den                                                           # cm2 / g
 
         return kabs_ave
 
-    """
-    # Absorption opacity averaged over illumination source's radiation field
-    def kabs_ave_source(kabs):
-
-        # Numerical integration
-        bb=models.BlackBody(temperature=Tstar)
-        bb_lambda=bb(wave*u.micron).value                           # erg / (cm2 Hz s sr)
-        y=bb_lambda*kabs                                            # erg / (cm2 Hz s sr g)
-        I=integrate.simpson(y,wave)
-        kabs_ave=np.pi/(c.sigma_sb.cgs.value*Tstar.value**4) * I    # cm2 / g
-
-        return kabs_ave
-
-    # Absorption opacity averaged over Planck spectrum
-    def kabs_ave_planck(Td,kabs):
-
-        # Numerical integration
-        bb=models.BlackBody(temperature=Td*u.K)
-        bb_lambda=bb(wave*u.micron).value                                   # erg / (cm2 Hz s sr)
-        y=bb_lambda*kabs                                                    # erg / (cm2 Hz s sr g)
-        I=integrate.simpson(y,wave)
-        kabs_ave=np.pi/(c.sigma_sb.cgs.value*Td**4) * I                     # cm2 / g
-
-        return kabs_ave
-    """
 
     # The equation to solve
-    def f(x,kabs):
-        frad=(0.5*Rsource/d).to(u.au/u.au)
-        return x**4 - frad**2 * kabs_ave(Tsource,kabs)/kabs_ave(x,kabs) * Tsource.value**4
+    def f(x):
+        frad = (0.5*(Rsource*u.Rsun)/(d*u.au)).decompose()
+        return x**4 - frad**2 * kabs_ave(Tsource)/kabs_ave(x) * Tsource**4
+
 
     # Using Newton-Raphson method to find equilibrum temperature
-    Td_sol = optimize.newton(f,20,args=(kabs))
+    Td_sol = optimize.newton(f,100)
 
     return Td_sol
+
+
+
 
 def Td_razor(Tsource,Rsource,d):
 
@@ -1335,13 +1313,8 @@ def Td_grain(Tsource,Rsource,d):
 
     """
 
-    Tsource     = Tsource*u.K
-    Rsource     = Rsource*u.Rsun
-    d           = d*u.au
 
-    Lsource     = (4*np.pi*c.sigma_sb*Rsource**2*Tsource**4)
-
-    Tgrain      = ((Lsource/(16*np.pi*c.sigma_sb*d**2))**0.25).to(u.K)
-    print(Lsource.to(u.Lsun ))
+    Lsource     = (4*np.pi*c.sigma_sb.cgs*(Rsource*u.Rsun)**2*(Tsource*u.K)**4)
+    Tgrain      = ((Lsource/(16*np.pi*c.sigma_sb.cgs*(d*u.au)**2))**0.25).to(u.K)
 
     return Tgrain
