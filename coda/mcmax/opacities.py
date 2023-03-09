@@ -242,12 +242,11 @@ def read_opacities(model,Nzones,fvSI,fvC):
         hdu_abso[j+1]=sum_abso[j]
         hdu_sca[j+1]=sum_sca[j]
 
-    print(np.transpose(hdu_ext).shape)
-    print(np.transpose(hdu_ext))
 
-    hdu_ext=fits.PrimaryHDU(np.transpose(hdu_ext))
-    hdu_abso=fits.PrimaryHDU(np.transpose(hdu_abso))
-    hdu_sca=fits.PrimaryHDU(np.transpose(hdu_sca))
+    hdu_ext     = fits.PrimaryHDU(np.transpose(hdu_ext))
+    hdu_abso    = fits.PrimaryHDU(np.transpose(hdu_abso))
+    hdu_sca     = fits.PrimaryHDU(np.transpose(hdu_sca))
+
 
     hdu_ext.writeto(model+'/ext.fits',overwrite=True)
     hdu_abso.writeto(model+'/abs.fits',overwrite=True)
@@ -296,6 +295,44 @@ def plot_opacities(model,label=None,save=None):
         fig.savefig("opacities.ps",format='ps')
     return None
 
+
+def opacities_txt(model,label=None,save=None):
+
+    """
+
+    Workaround. Try and do it in read_opacities()
+
+    """
+
+    hdulist_ext=fits.open(model+'/ext.fits') # row: wl, col: z1,z2,z3
+    hdulist_abso=fits.open(model+'/abs.fits')
+    hdulist_sca=fits.open(model+'/sca.fits')
+
+    ext=hdulist_ext[0].data
+    abso=hdulist_abso[0].data
+    sca=hdulist_sca[0].data
+
+    Nzones=ext.shape[1]-1
+    print("Nzones=%d"%Nzones)
+
+    #fig=plt.figure(figsize=(13,4))
+    for i in range(0,Nzones):
+
+        wl_array    = np.reshape(ext[:,0:1],ext.shape[0])
+        ext_array   = np.reshape(ext[:,i+1:i+2],ext.shape[0])
+        abso_array  = np.reshape(abso[:,i+1:i+2],ext.shape[0])
+        sca_array   = np.reshape(sca[:,i+1:i+2],ext.shape[0])
+
+
+        file=open("opacities_Zone00%d.dat"%(i+1),"w")
+        file.write("# wavelength(micron)    ext(cm2/g)   abs     sca\n")
+        for i in range(len(wl_array)):
+            file.write("%.15e   %.15e   %.15e   %.15e\n"
+                        %(wl_array[i],ext_array[i],abso_array[i],sca_array[i]))
+        file.close()
+
+
+    return None
 
 
 def psize_bin(model,fvSI,fvC):
