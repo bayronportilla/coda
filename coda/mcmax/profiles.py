@@ -2,7 +2,7 @@ from coda.mcmax.header import *
 
 '''
 
-This module is largely dependant on the Gofish package by Richard Teague
+This module depends on the GoFish package by Richard Teague
 https://joss.theoj.org/papers/10.21105/joss.01632
 
 '''
@@ -70,6 +70,7 @@ def get_profile(image,dist,pa,inc,aperture,
         else:
             value = np.zeros(len(r))
         return value
+
 
     if cube.data.ndim==2:
 
@@ -139,53 +140,36 @@ def get_profile(image,dist,pa,inc,aperture,
     else:
 
         print("\n Working with a data cube \n")
-        print(inc)
-        print(pa)
-        print(dist)
+
         # Determine limits of the conical aperture
-        padir=aperture[0]
-        widir=aperture[1]
-        dr=aperture[2]
-        PAmin=padir-0.5*widir
-        PAmax=padir+0.5*widir
+        padir   = aperture[0]
+        widir   = aperture[1]
+        dr      = aperture[2]
+        PAmin   = padir-0.5*widir
+        PAmax   = padir+0.5*widir
 
         # Extracting radial profile with GoFish
-        """
         xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,
                                           x0=0.0,y0=0.0,assume_correlated=False,
                                           PA_min=PAmin,PA_max=PAmax,dr=dr,
-                                          unit=unit)
-        """
-
-        """
-        xm, ym, dym = cube.radial_profile(inc=inc,PA=pa,dist=dist,mstar=0.76,
+                                          z0=z0,psi=psi,r_cavity=r_cavity,
+                                          r_taper=r_taper,q_taper=q_taper,
                                           unit=unit)
 
-        plt.plot(xm,ym,'.')
-        plt.show()
+        # Write to file?
+        if write:
+            file=open(image+"."+unit+".radial","w")
+            for i,j,k in zip(xm,ym,dym):
+                file.write("%.15e %.15e %.15e\n"%(i,j,k))
+            file.close()
 
 
-        f=open("Tpeak_observation.dat","w")
-
-
-        for i,j in zip(xm,ym):
-            f.write("%.15e  %.15e\n"%(i,j))
-        f.close()
-        plt.plot(xm,ym,'.')
-        plt.show()
-        """
-        """
-        file=open("13CO.radial.cube.WithAperture","w")
-        for i,j,k in zip(xm,ym,dym):
-            file.write("%.15e %.15e %.15e\n"%(i,j,k))
-        file.close()
-        """
 
         # Plotting teardrop plot
-        cube.plot_teardrop(inc=inc, PA=pa,mstar=0.76, dist=dist)
+        #cube.plot_teardrop(inc=inc, PA=pa,mstar=0.76, dist=dist)
         #cube.plot_teardrop(inc=51.7, PA=160.4,mstar=1.0, dist=dist)
 
-        plt.show()
+        #plt.show()
 
         #plt.plot(xm,ym,'.')
         #plt.show()
