@@ -292,13 +292,14 @@ def convert_to_fits(model,lineID,prefix):
 
 ################################################################################
 # Running the pipeline
-model='/Users/bportilla/Documents/project2/ProDiMo_models/run030'
+#model='/Users/bportilla/Documents/project2/revisions/v2/Tb_peak/run103'
+model='/Users/bportilla/Documents/project2/ProDiMo_models/run103'
 angle=70.4 # Angle for cube rotation ---> Explain this in detail (!)
 
 lineID='001'
-bmaj=0.28
-bmin=0.23
-pa=81.34
+bmaj=0.13
+bmin=0.10
+pa=-83.75
 nu0=2.30537939e11
 
 rotate(model,lineID,angle)
@@ -306,5 +307,6 @@ convolve(model,lineID,bmaj,bmin,pa)
 subtract_continuum(model,lineID)
 convert_to_fits(model,lineID,'line')
 create_moments(model,lineID)
+convert_to_fits(model,lineID,'mom0')
 convert_units(model,lineID,nu0,bmaj,bmin)
 convert_to_fits(model,lineID,'Tb')
