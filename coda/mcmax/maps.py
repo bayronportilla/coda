@@ -279,39 +279,55 @@ def create_maps(model,fieldname,cpd=None):
     Stores the three-dimensional map of every supported MCMax3D quantity
     to be plotted or analyzed with other routines.
 
+    Supported values for fieldname are:
+    - 'rhod'    : dust density
+    - 'temp'    : dust temperature
+    - 'rhog'    : gas density       (?)
+    - 'chi'     : radiation field   (?)
+
     Limitations
     ------------
     *   The grid resolution in each zone of the PPD must be the same.
     *   Only one CPD zone is supported.
     """
 
-    if fieldname!="amean":
-        zones=mread.read_zones(model+"/output/")
+    if fieldname != "amean":
+        zones = mread.read_zones(model+"/output/")
+
         if cpd is None:
-            x=np.empty((int(zones[0].np),int(zones[0].nt),int(zones[0].nr)),dtype=float)
-            y,z,r,phi,f=x,x,x,x,x
+            x   = np.empty((int(zones[0].np),int(zones[0].nt),int(zones[0].nr)),dtype=float)
+            y   = x
+            z   = x
+            r   = x
+            phi = x
+
             for zone in zones:
                 if zone.x0==0.0 and zone.y0==0.0:
-                    x=np.append(x,zone.x,axis=2)
-                    y=np.append(y,zone.y,axis=2)
-                    z=np.append(z,zone.z,axis=2)
-                    r=np.append(r,zone.r,axis=2)
-                    phi=np.append(phi,zone.phi,axis=2)
-                    field=np.log10(getattr(zone,fieldname))
-                    f=np.append(f,field,axis=2)
-            x,y,z=x[:,:,int(zones[0].nr):],y[:,:,int(zones[0].nr):],z[:,:,int(zones[0].nr):]
-            r,phi=r[:,:,int(zones[0].nr):],phi[:,:,int(zones[0].nr):]
-            f=f[:,:,int(zones[0].nr):]
+                    x       = np.append(x,zone.x,axis=2)
+                    y       = np.append(y,zone.y,axis=2)
+                    z       = np.append(z,zone.z,axis=2)
+                    r       = np.append(r,zone.r,axis=2)
+                    phi     = np.append(phi,zone.phi,axis=2)
+                    field   = np.log10(getattr(zone,fieldname))
+                    f       = np.append(f,field,axis=2)
+
+            x       = x[:,:,int(zones[0].nr):]
+            y       = y[:,:,int(zones[0].nr):]
+            z       = z[:,:,int(zones[0].nr):]
+            r       = r[:,:,int(zones[0].nr):]
+            phi     = phi[:,:,int(zones[0].nr):]
+            f       = f[:,:,int(zones[0].nr):]
+
         if cpd is True:
             for zone in zones:
                 if zone.x0!=0.0 or zone.y0!=0.0:
-                    field=np.log10(getattr(zone,fieldname))
-                    x=zone.x
-                    y=zone.y
-                    z=zone.z
-                    r=zone.r
-                    phi=zone.phi
-                    f=field
+                    field   = np.log10(getattr(zone,fieldname))
+                    x       = zone.x
+                    y       = zone.y
+                    z       = zone.z
+                    r       = zone.r
+                    phi     = zone.phi
+                    f       = field
 
     if fieldname is "amean":
         zoneID=int(input("Introduce the zoneID: "))
