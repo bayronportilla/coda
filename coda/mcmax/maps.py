@@ -251,17 +251,29 @@ class Map:
 
 
         if fullave:
-            std_array=[np.std(np.reshape(f[:,i:i+1],f.shape[0])) for i in range(0,f.shape[1])]
-            fig=plot_statistics(f,std_array,0.0,visual=True)
+            std_array   = [np.std(np.reshape(f[:,i:i+1],f.shape[0])) for i in range(0,f.shape[1])]
+            fig         = plot_statistics(f,std_array,0.0,visual=True)
             fig.show()
-            f_ave,r_ave=[],[]
+
+            f_ave   = []
+            r_ave   = []
+
             for i in range(0,f.shape[1]):
                 f_ave.append(np.sum(np.reshape(f[:,i:i+1],f.shape[0]))/f.shape[0])
                 r_ave.append(r[i])
-            f_ave,r_ave=np.array(f_ave),np.array(r_ave)
-            file=open("field_ave.dat","w")
+
+            f_ave   = np.array(f_ave)
+            r_ave   = np.array(r_ave)
+
+            print(f)
+
+            file    = open("%s_fullave.dat"%fieldname,"w")
             for i,j in zip(r_ave,f_ave):
-                file.write("%.15e %.15e\n"%(i,10**j))
+                if fieldname    == 'temp':
+                    file.write("%.15e %.15e\n"%(i,10**j))
+                elif fieldname  == 'rhod':
+                    file.write("%.15e %.15e\n"%(i,10**j))
+
             file.close()
 
             ''' Plotting '''
