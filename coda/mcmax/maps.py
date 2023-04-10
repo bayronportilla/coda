@@ -198,7 +198,7 @@ class Map:
             plt.show()
 
             # Save to file
-            file=open("field_cut_%s.dat"%(str(phival)),"w")
+            file = open("%s_cut_%s.dat"%(self.name,str(phival)),"w")
             for i,j in zip(r_cut,f_cut):
                 file.write("%.15e %.15e\n"%(i,10**j))
             file.close()
@@ -265,13 +265,12 @@ class Map:
             f_ave   = np.array(f_ave)
             r_ave   = np.array(r_ave)
 
-            print(f)
-
-            file    = open("%s_fullave.dat"%fieldname,"w")
+            file    = open("%s_fullave.dat"%self.name,"w")
             for i,j in zip(r_ave,f_ave):
-                if fieldname    == 'temp':
+                if self.name    == 'temp':
                     file.write("%.15e %.15e\n"%(i,10**j))
-                elif fieldname  == 'rhod':
+
+                elif self.name  == 'rhod':
                     file.write("%.15e %.15e\n"%(i,10**j))
 
             file.close()
@@ -333,7 +332,7 @@ def create_maps(model,fieldname,cpd=None):
         if cpd is True:
             for zone in zones:
                 if zone.x0!=0.0 or zone.y0!=0.0:
-                    field   = np.log10(getattr(zone,fieldname))
+                    field   = np.log10(getattr(zone,fieldname)) # Remove log?
                     x       = zone.x
                     y       = zone.y
                     z       = zone.z
