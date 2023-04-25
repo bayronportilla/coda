@@ -165,7 +165,8 @@ class Map:
 
     # Plot midplane. (It supports only averaged quantities)
     def plot_midplane(self,clines=None,fname=None,log=True,ave=None,fullave=None,
-        phival=None,xlog=None,ylog=None,xlabel=None,ylabel=None,title=None):
+        phival=None,xlog=None,ylog=None,xlabel=None,ylabel=None,title=None,
+        cone_width=None):
 
         x   = self.x[:,int(self.x.shape[1]*0.5),:]
         y   = self.y[:,int(self.y.shape[1]*0.5),:]
@@ -178,30 +179,80 @@ class Map:
         phi = np.reshape(phi[:,0],phi.shape[0])
 
         if phival is not None:
-            phi_array   = (phi*u.rad).to(u.deg)
-            index       = np.argmin(np.abs(phi_array.value-phival))
+            if cone_width==None:
+                phi_array   = (phi*u.rad).to(u.deg)
+                index       = np.argmin(np.abs(phi_array.value-phival))
 
-            f_cut = []
-            r_cut = []
+                f_cut = []
+                r_cut = []
 
-            print("\n Extracting radial temperature at phi=%.2f"%(phi_array[index].value))
+                print("\n Extracting radial temperature at phi=%.2f"%(phi_array[index].value))
 
-            for i in range(0,len(r)):
-                r_cut.append(r[i])
-                f_cut.append(f[index,i])
+                for i in range(0,len(r)):
+                    r_cut.append(r[i])
+                    f_cut.append(f[index,i])
 
-            r_cut=np.array(r_cut)
-            f_cut=np.array(f_cut)
+                r_cut=np.array(r_cut)
+                f_cut=np.array(f_cut)
 
-            ''' Plotting '''
-            ax=axes1D(r_cut,10**f_cut,xlog,ylog,xlabel,ylabel,title)
-            plt.show()
+                ''' Plotting '''
+                ax=axes1D(r_cut,10**f_cut,xlog,ylog,xlabel,ylabel,title)
+                plt.show()
 
-            # Save to file
-            file = open("%s_cut_%s.dat"%(self.name,str(phival)),"w")
-            for i,j in zip(r_cut,f_cut):
-                file.write("%.15e %.15e\n"%(i,10**j))
-            file.close()
+                # Save to file
+                file = open("%s_cut_%s.dat"%(self.name,str(phival)),"w")
+                for i,j in zip(r_cut,f_cut):
+                    file.write("%.15e %.15e\n"%(i,10**j))
+                file.close()
+
+            if cone_width is not None:
+
+                '''
+                Average temperature over a cone facing the star
+                '''
+
+                print("cone width = ",cone_width)
+                phival_min = phival - 0.5*cone_width
+                phival_max = phival + 0.5*cone_width
+                print("phi min = ",phival_min)
+                print("phi max = ",phival_max)
+
+                phi_array   = (phi*u.rad).to(u.deg)
+                index_min   = np.argmin(np.abs(phi_array.value-phival_min))
+                index_max   = np.argmin(np.abs(phi_array.value-phival_max))
+
+                f_cone_ave = []
+                r_cone_ave = []
+
+                print("\n Extracting radial temperature within cone_width")
+
+                for i in range(0,len(r)):
+                    r_cone_ave.append(r[i])
+                    f_cone_ave.append(np.sum(f[index_min:index_max,i])/len(f[index_min:index_max,i]))
+
+                r_cone_ave = np.array(r_cone_ave)
+                f_cone_ave = np.array(f_cone_ave)
+
+                ''' Plotting '''
+                ax=axes1D(r_cone_ave,10**f_cone_ave,xlog,ylog,xlabel,ylabel,title)
+                plt.show()
+
+                # Save to file
+                file = open("%s_cut_%s_averaged_%s.dat"%(self.name,str(phival),str(cone_width)),"w")
+                for i,j in zip(r_cone_ave,f_cone_ave):
+                    file.write("%.15e %.15e\n"%(i,10**j))
+                file.close()
+
+
+
+
+
+
+
+
+
+
+
 
         def plot_statistics(matrix,array,F,visual=None):
             median,mad=np.median(array),median_absolute_deviation(array)
