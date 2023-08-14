@@ -1315,6 +1315,6 @@ def Td_grain(Tsource,Rsource,d):
 
 
     Lsource     = (4*np.pi*c.sigma_sb.cgs*(Rsource*u.Rsun)**2*(Tsource*u.K)**4)
-    Tgrain      = ((Lsource/(16*np.pi*c.sigma_sb.cgs*(d*u.au)**2))**0.25).to(u.K)
+    Tgrain      = ((Lsource/(4*np.pi*c.sigma_sb.cgs*(d*u.au)**2))**0.25).to(u.K)
 
     return Tgrain
