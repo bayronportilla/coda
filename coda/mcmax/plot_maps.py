@@ -5,17 +5,23 @@ import numpy as np
 import sys
 import os
 
-dir='/data/users/bportilla/runs_P2/runs_ProDiMo/pds70/'
-run=sys.argv[1]
-model=pread.read_prodimo(dir+run)
-pp=pplot.Plot(None)
+"""
+Example.
+sys.argv[1] = /data/users/bportilla/runs_P4/new_master/fixed_C/C2O_effect/
+sys.argv[2] = C2O_0.457
 
 """
+dir     = sys.argv[1]
+run     = sys.argv[2]
+model   = pread.read_prodimo(dir+run)
+pp      = pplot.Plot(None)
+
+
 # Gas density
 tcont=pplot.Contour(model.rhog,[10**-15],showlabels=True,label_fontsize=8,label_fmt="%.1e")
 pp.plot_cont(model,model.rhog,label=r"$\log(\rho_{gas})\,[g/cm3]}$",xlog=False,oconts=[tcont])
 plt.show()
-"""
+
 
 """
 # Tgas
@@ -133,7 +139,7 @@ pp.plot_line_origin(model,[["N2H+",1.0725578104E+03]],model.nmol[:,:,4],xlog=Fal
 label=r"$\log n(H2)\,[cm^-3]}$")
 plt.show()
 """
-
+"""
 # Abundance
 pp.plot_abuncont(model,species='CO',
     xlog=False,
@@ -142,7 +148,7 @@ pp.plot_abuncont(model,species='CO',
     rel2H=True,
     zr=True)
 plt.show()
-
+"""
 
 """
 # Abundance radial
@@ -171,13 +177,13 @@ plt.show()
 pp.plot_abunvert(model,30.0,['CO'],useZr=True)
 plt.show()
 """
-
+"""
 # Plot maing heating and cooling processes
 pp.plot_heat_cool(model,
     xlog=False,
     ylim=[0.0,0.4])
 plt.show()
-
+"""
 
 """
 print(model.heat_mainidx)
