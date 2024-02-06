@@ -292,15 +292,15 @@ def convert_to_fits(model,lineID,prefix):
 
 ################################################################################
 # Running the pipeline
-#model='/Users/bportilla/Documents/project2/paper_figures/Tb_peak/run096'
-model='/Users/bportilla/Documents/project2/ProDiMo_models/run103'
+#model='/Users/bportilla/Documents/project2/ProDiMo_models/run103'
+model='/Users/bportilla/Documents/project4/simulations/new_master/C2O_effect/C2O_0.457'
 angle=70.4 # Angle for cube rotation ---> Explain this in detail (!)
 
-lineID  = '001'
-bmaj    = 0.13
-bmin    = 0.10
-pa      = -83.75
-nu0     = 2.30537939e11
+lineID  = '005'
+bmaj    = 0.16
+bmin    = 0.13
+pa      = -82.40
+nu0     = 2.19560296e11
 
 rotate(model,lineID,angle)
 convolve(model,lineID,bmaj,bmin,pa)

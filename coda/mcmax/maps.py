@@ -244,16 +244,6 @@ class Map:
                 file.close()
 
 
-
-
-
-
-
-
-
-
-
-
         def plot_statistics(matrix,array,F,visual=None):
             median,mad=np.median(array),median_absolute_deviation(array)
             if visual is True:
@@ -362,6 +352,7 @@ def create_maps(model,fieldname,cpd=None):
             z   = x
             r   = x
             phi = x
+            f   = x
 
             for zone in zones:
                 if zone.x0==0.0 and zone.y0==0.0:

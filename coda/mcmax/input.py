@@ -1,5 +1,8 @@
 from coda.mcmax.header import *
-
+from dataclasses import dataclass
+import numpy as np
+from astropy import units as u
+from scipy.integrate import romb,simps,quad,simpson
 @dataclass
 class File:
 
@@ -360,7 +363,7 @@ def make_density_profile(Rin,Rout,Mdust,
     """
 
     Creates a surface density profile for a given value of the mass assuming an
-    exponential and tappered profile (see Portilla-Revelo et al. 2022, Eq.(1))
+    exponential and tappered profile (see Portilla-Revelo et al. 2022, Eq.1)
 
     Parameters
     ----------
@@ -1318,3 +1321,87 @@ def Td_grain(Tsource,Rsource,d):
     Tgrain      = ((Lsource/(4*np.pi*c.sigma_sb.cgs*(d*u.au)**2))**0.25).to(u.K)
 
     return Tgrain
+
+
+def h_gas(r,
+    hprm_list=None):
+
+    """
+
+    Gas scale height
+
+    Parameters:
+    -----------
+    r           : radial distance. (au)
+    prm_list    : parameter list. [r0(au),h0(au),beta]
+
+    Output:
+    -------
+
+    """
+
+    if hprm_list is None:
+        hprm_list = [1.0, 0.1, 1.2]
+
+    r0      = hprm_list[0]
+    h0      = hprm_list[1]
+    beta    = hprm_list[2]
+
+    value = h0*(r/r0)**beta
+
+    return value
+
+
+def hd_with_settling(agrain,r,Sigmag,
+    alpha=None,
+    hprm_list=None,
+    rho_grain=None):
+
+    """
+
+    Dust scale height per bin size
+
+    Parameters:
+    -----------
+    agrain      : grain size. (micron)
+    r           : radial distance. (au)
+    Sigmag      : Gas surface density at r. (g/cm2)
+    alpha       : (Optional) Turbulence strength.
+    hprm_list   : (Optional) Parameter list for h_gas(). [r0(au),h0(au),beta]
+    rho_grain   : (Optional) Gran mass density. (g/cm3)
+
+    Output:
+    -------
+    hd          : Scale height for i-th grain. (au)
+
+    """
+
+    # Optional variables
+    if hprm_list is None:
+        hprm_list = [1.0, 0.1, 1.2]
+
+    if rho_grain is None:
+        rho_grain = 2
+
+    if alpha is None:
+        alpha = 1e-3
+
+    # Asign units
+    s           = agrain*(u.micron)
+    rho_grain   = rho_grain*(u.g/u.cm**3)
+    Sigmag      = Sigmag*(u.g/u.cm**2)
+
+    # Gas scale height
+    r0      = hprm_list[0]
+    h0      = hprm_list[1]
+    beta    = hprm_list[2]
+    hg      = h0*(r/r0)**beta
+
+    # Calculate f factor at point r for bin size s
+    f_rs        = (alpha/((6*np.pi)**0.5*s*rho_grain) * Sigmag).decompose()
+
+    # Calculate scale height for size s
+    hd_rs = hg * (f_rs/(1+f_rs))**0.5
+
+
+    return hd_rs
