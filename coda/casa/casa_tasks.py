@@ -22,7 +22,7 @@ order:
 
 import sys
 
-def rotate(model,lineID,angle):
+def rotate(file,angle):
 
     """
 
@@ -46,11 +46,11 @@ def rotate(model,lineID,angle):
     """
 
     # Printing info
-    print("\n Rotating the model... \n")
+    print("\n Rotating the file... \n")
 
     # Define the variables 'cube' and 'angle'
-    cube=model+"/LINE_3D_"+lineID+".fits"
-    angle=str(angle)+"deg"
+    cube = file
+    angle = str(angle)+"deg"
 
     # Converting fits image to CASA format
     ia.fromfits(infile=cube)
@@ -67,7 +67,7 @@ def rotate(model,lineID,angle):
     return None
 
 
-def convolve(model,lineID,bmaj,bmin,pa):
+def convolve(file,bmaj,bmin,pa):
 
     """
 
@@ -91,7 +91,7 @@ def convolve(model,lineID,bmaj,bmin,pa):
     print("\n Convolving the model... \n")
 
     # Define the variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits.rot"
+    cube=file
 
     # Convolution
     bmaj=str(bmaj)+"arcsec"
@@ -113,7 +113,7 @@ def convolve(model,lineID,bmaj,bmin,pa):
     return None
 
 
-def subtract_continuum(model,lineID):
+def subtract_continuum(file):
 
     """
 
@@ -138,7 +138,7 @@ def subtract_continuum(model,lineID):
     default('imcontsub')
 
     # Define 'cube' variable
-    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv"
+    cube=file
 
     # Get total number of channels from convolved image
     Nchans=imhead(cube,mode='get',hdkey='shape')[2]
@@ -166,7 +166,7 @@ def subtract_continuum(model,lineID):
     return None
 
 
-def create_moments(model,lineID):
+def create_moments(file):
 
     """
     Create moment maps from a convolved and continuum-subtracted
@@ -189,7 +189,7 @@ def create_moments(model,lineID):
     default('immoments')
 
     # Define variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line"
+    cube = file
 
     # Remove file if exists
     # ---> Raise a warning. Maybe Try and except? (!)
@@ -203,7 +203,7 @@ def create_moments(model,lineID):
     return None
 
 
-def convert_units(model,lineID,nu0,bmaj,bmin):
+def convert_units(file,nu0,bmaj,bmin):
 
     """
 
@@ -230,7 +230,7 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     default('immath')
 
     # Define the variable 'cube'
-    cube=model+"/LINE_3D_"+lineID+".fits.rot.conv.line.mom0"
+    cube=file
 
     # Rest frequency in GhZ
     nu0=nu0/1e9
@@ -240,15 +240,17 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
 
     # Remove file if exists
     # ---> Raise a warning. Maybe Try and except? (!)
+    
     os.system("rm -rf "+cube+".Tb")
-
+    
     # From intensity to brightness temperature. This method is used here:
     # https://casaguides.nrao.edu/index.php/VLA_CASA_Imaging-CASA5.0.0#Image_Conversion
+    
     immath(imagename=cube,
-    mode='evalexpr',
-    expr=('1.222e6*IM0/%s/(%s*%s)'%(nu0_pow_2,bmaj,bmin)),
-    outfile=cube+'.Tb')
-
+        mode='evalexpr',
+        expr=('1.222e6*IM0/%s/(%s*%s)'%(nu0_pow_2,bmaj,bmin)),
+        outfile=cube+'.Tb')
+    
     # Change unit in header
     imhead(imagename=cube+'.Tb',
     mode='put',
@@ -258,7 +260,7 @@ def convert_units(model,lineID,nu0,bmaj,bmin):
     return None
 
 
-def convert_to_fits(model,lineID,prefix):
+def convert_to_fits(file):
 
     """
 
@@ -275,12 +277,12 @@ def convert_to_fits(model,lineID,prefix):
     """
 
     # Printing info
-    print("\n Converting .%s set into fits format... \n"%(prefix))
+    print("\n Converting %s file into fits format... \n"%(file))
 
     default('exportfits')
 
     # Define the 'cube' variable
-    cube=os.popen("find %s -type d -name '*_%s*.%s'"%(model,lineID,prefix)).read()[:-1]
+    cube=file
 
     # Convert CASA image into a fits image
     exportfits(imagename=cube,
@@ -292,22 +294,29 @@ def convert_to_fits(model,lineID,prefix):
 
 ################################################################################
 # Running the pipeline
-#model='/Users/bportilla/Documents/project2/ProDiMo_models/run103'
-model='/Users/bportilla/Documents/project4/simulations/new_master/C2O_effect/C2O_0.457'
+#file='~/Documents/Models/prodimo/PDS-70/Portilla-Revelo-2023-reduced.v2/image-cont-855.fits'
+file='/Users/bportilla/Documents/Models/prodimo/PDS-70/Portilla-Revelo-2023-reduced.v2/LINE_3D_001.fits'
+#file='/Users/bportilla/Documents/Models/prodimo/PDS-70/Portilla-Revelo-2023-reduced.v2/image-cont-855.fits'
 angle=70.4 # Angle for cube rotation ---> Explain this in detail (!)
 
-lineID  = '005'
-bmaj    = 0.16
-bmin    = 0.13
-pa      = -82.40
-nu0     = 2.19560296e11
+"""
+bmaj    = 0.067
+bmin    = 0.050
+pa      = 61.5
+"""
 
-rotate(model,lineID,angle)
-convolve(model,lineID,bmaj,bmin,pa)
-convert_to_fits(model,lineID,'conv')
-subtract_continuum(model,lineID)
-convert_to_fits(model,lineID,'line')
-create_moments(model,lineID)
-convert_to_fits(model,lineID,'mom0')
-convert_units(model,lineID,nu0,bmaj,bmin)
-convert_to_fits(model,lineID,'Tb')
+bmaj    = 0.13
+bmin    = 0.10
+pa      = -83.75
+nu0     = 2.30537939e11
+
+rotate(file,angle)
+convolve(file+'.rot',bmaj,bmin,pa)
+convert_to_fits(file+'.rot.conv')
+subtract_continuum(file+'.rot.conv')
+convert_to_fits(file+'.rot.conv.line')
+create_moments(file+'.rot.conv.line')
+convert_to_fits(file+'.rot.conv.line.mom0')
+convert_units(file+'.rot.conv.line.mom0',nu0,bmaj,bmin)
+convert_to_fits(file+'.rot.conv.line.mom0.Tb')
+
