@@ -514,7 +514,7 @@ def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,l
         particle i.e. when there is only one keyword of the type 'computepartXX'
         in the input.dat file.
 
-    *   When using this routine, I assume you have already ran a 'stop-after-init'
+    *   Before using this routine, you must have already ran a 'stop-after-init'
         ProDiMo simulation. This way you have a grid where MCMax3D quntities will
         be interpolated to.
 
@@ -564,7 +564,7 @@ def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,l
     >>> from coda.mcmax import input
 
     3. Call the module passing the appropriate parameters
-    >>> input.convert_density_file("<path-to-MCMax3D-model>",visual=True,find_dust_mass=False)
+    >>> input.convert_density_file("<path-to-MCMax3D-model>",visual=True,find_dust_mass=False,Nzones=2)
 
     '''
 

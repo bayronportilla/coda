@@ -18,7 +18,7 @@ from scipy.interpolate import Rbf
 from scipy.stats import norm
 import pandas as pd
 from gofish import imagecube
-#from astropy.convolution import convolve,Gaussian2DKernel
+from astropy.convolution import convolve,Gaussian2DKernel
 from matplotlib.colors import LogNorm
 #from astropy.modeling import models
 from scipy import optimize
