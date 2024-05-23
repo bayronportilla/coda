@@ -663,10 +663,10 @@ def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,l
     # Computing psize
     print("\n Retrieving dust size distribution from MCMax3D model... \n")
     psize=get_size_distribution(model)
-    
+
     ai_array=psize[:,0] # microns
-    
-    
+
+
 
 
     # Reading input file to get zone limits
