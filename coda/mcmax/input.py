@@ -294,6 +294,38 @@ class File:
         f.close()
 
         return None
+    
+    def shift_profile(self,Dx):
+
+        """
+        Shifts a surface density file along the x-axis by a fixed amount 
+        conserving the mass
+
+        Parameters
+        ----------
+
+        Dx  : amount along the x-axis the profile will be shifted by. [float] (au)
+
+        """
+
+        # Shifting along x-axis
+        xnew = self.x+Dx # au
+        xnew_cm = ( xnew*u.au).to(u.cm).value
+
+        # Computing masses
+        Mold = self.calculate_mass()
+        Mnew = (2*np.pi*simps(xnew_cm*self.y,xnew_cm)*u.g).to(u.Msun)
+        
+        # Rescaling density to conserve mass
+        ynew = self.y*( Mold/Mnew )
+
+        # Save to file
+        f=open(self.name+".shifted","w")
+        for i,j in zip(xnew,ynew):
+            f.write("%.15e %.15e\n"%(i,j))
+        f.close()
+
+        return None
 
 
     def plot_MCSpec(self,unit=None):
