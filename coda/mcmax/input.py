@@ -92,8 +92,8 @@ class File:
                     interpolator to infer the values of the files at each self.x point.
                     If out of bounds interpolation is required, it uses the extreme
                     values of the files as boundary conditions. (list).
-        reeplace    : It has to be used alongside k and rlim. If True, it reeplaces
-                    all the values between rlim by k.
+        reeplace    : It must be used alongside k and rlim. If True, it reeplaces
+                    all the values within rlim by k.
         type        :
 
         """
@@ -193,7 +193,7 @@ class File:
 
             plt.yscale('log')
             plt.show()
-        '''
+        
         # Reeplace points by a straight line
         if type=='linear':
 
@@ -237,6 +237,7 @@ class File:
                     ynew+=[y[i]*(m*self.x[i]+b)]
                 else:
                     ynew+=[1*y[i]]
+        '''
 
         if type=='exponential':
 
