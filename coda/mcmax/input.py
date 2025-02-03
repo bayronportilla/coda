@@ -518,12 +518,16 @@ def convert_comp(fc,porosity,qtype) :
     return None
 
 
-def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,leftg2d=None):
+def convert_density_file(model,
+                         Nzones,
+                         g2d=None,
+                         visual=None,
+                         find_dust_mass=None,
+                         leftg2d=None):
 
     '''
 
-    Convert a standard MCMax3D grid density output into a 1D input sdfile for
-    ProDiMo.
+    Convert an MCMax3D density field into a 1D sdfile.in for ProDiMo.
 
                         r
                      ------>
@@ -541,31 +545,31 @@ def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,l
 
     Caution!
     --------
-    *   The length of the r_array will determine the resolution of the ProDiMo
+    *   The length of the r_array determines the resolution of the ProDiMo
         model. Choose it wisely!
 
-    *   This routine only works when the MCMax3D model has only one type of
-        particle i.e. when there is only one keyword of the type 'computepartXX'
+    *   This routine works only when the MCMax3D model has only *one* type of
+        particle; i.e., when there is only one 'computepartXX' keyword
         in the input.dat file.
 
-    *   Before using this routine, you must have already ran a 'stop-after-init'
-        ProDiMo simulation. This way you have a grid where MCMax3D quntities will
-        be interpolated to.
+    *   Before using this routine, you must have run a 'stop-after-init'
+        ProDiMo simulation. This is because you must have a grid where to interpolate the MCMax3D 
+        quntities.
 
     *   The density profile inside the folder must be named as:
         'surface_density_PDS70_70_cropped.dat'
 
     *   This routine works only with 2D models.
 
-    *   MCMax3D model must have exclussively two zones; no one, no three...
+    *   MCMax3D model must have exclussively two zones---not one, not three...
 
     *   Rin and Rout must be equal to 0.04 au and 130 au respectively.
 
-    *   The number of radial points of the ProDiMo grid must be equal to that in
-        the MCMax3D model.
+    *   The number of radial grid points of the ProDiMo model must be equal to its 
+        MCMax3D counterpart.
 
     *   For production results, it is advisable to run the MCMax3D model with a
-        refined radial grid, Nr>=60 per zone as long as this is computationally
+        refined radial grid, Nr>=60 per zone, as long as this is computationally
         feasible.
 
     Parameters
@@ -604,16 +608,16 @@ def convert_density_file(model,Nzones,g2d=None,visual=None,find_dust_mass=None,l
 
     @dataclass
     class CellMcmax:
-        r:float             # cm
-        theta:float
-        phi:float
-        r_max:float
-        r_min:float
-        theta_max:float
-        theta_min:float
-        phi_max:float
-        phi_min:float
-        comp:float
+        r           : float             # cm
+        theta       : float
+        phi         : float
+        r_max       : float
+        r_min       : float
+        theta_max   : float
+        theta_min   : float
+        phi_max     : float
+        phi_min     : float
+        comp        : float
 
         def dV(self):
             # Units: cm^3
