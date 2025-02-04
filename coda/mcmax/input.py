@@ -587,9 +587,10 @@ def convert_density_file(model,
     leftg2d : This sets the value of the g2d at those radial grid points to the
             left of the minimum distance included in the g2d file. (float)
     save    : Save to a fits file everything that is needed to create the sdprofile.in
-            file. This way, it won't be needed to have access to the MCMax3D model 
-            if one wants to try, for example, different gas distributions while 
-            the dust distribution remains unchanged. 
+            file. This way, it won't be needed to access the MCMax3D model 
+            if one wants to try, for example, a different gas distribution while keeping
+            the dust distribution unchanged. THe file has 3 HDUs: hdu1=fsize,
+            hdu2=r_array (cm), and hdu3=ai_array (cm).  
 
     Example
     -------
@@ -1006,6 +1007,16 @@ def convert_density_file(model,
     ai_array=(ai_array*u.micron).to(u.cm)
     r_array=(r_array*u.au).to(u.cm)
 
+
+    # Saving to a fits file
+    if save is True:
+        hdu1=fits.PrimaryHDU(data=fsize) # Primary HDU contains the fsize matrix
+        hdu2=fits.ImageHDU(data=r_array.value) # cm
+        hdu3=fits.ImageHDU(data=ai_array.value) # cm
+        
+        hdul=fits.HDUList([hdu1,hdu2,hdu3])
+        hdul.writeto('sdprofile.fits',overwrite=True)
+    
     # Calling prodimopy
     write("sdprofile.in",r_array.value,S_array*g2d_array,g2d_array,ai_array.value,fsize)
 
