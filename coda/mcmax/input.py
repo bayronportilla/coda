@@ -1003,6 +1003,7 @@ def convert_density_file(model,
                 fg2d.write("%.5f    %.5f\n"%(i,j))
             fg2d.close()
 
+
     # Converting to ProDiMo units
     ai_array=(ai_array*u.micron).to(u.cm)
     r_array=(r_array*u.au).to(u.cm)
