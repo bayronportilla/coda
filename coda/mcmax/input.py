@@ -1017,7 +1017,7 @@ def convert_density_file(model,
         hdul=fits.HDUList([hdu1,hdu2,hdu3])
         hdul.writeto('sdprofile.fits',overwrite=True)
     
-    
+
     # Calling prodimopy
     write("sdprofile.in",r_array.value,
           S_array*g2d_array,
