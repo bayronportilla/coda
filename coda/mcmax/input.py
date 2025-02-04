@@ -523,10 +523,10 @@ def convert_density_file(model,
                          g2d=None,
                          visual=None,
                          find_dust_mass=None,
-                         leftg2d=None):
+                         leftg2d=None,
+                         save=None):
 
     '''
-
     Convert an MCMax3D density field into a 1D sdfile.in for ProDiMo.
 
                         r
@@ -586,6 +586,10 @@ def convert_density_file(model,
             (Bool).
     leftg2d : This sets the value of the g2d at those radial grid points to the
             left of the minimum distance included in the g2d file. (float)
+    save    : Save to a fits file everything that is needed to create the sdprofile.in
+            file. This way, it won't be needed to have access to the MCMax3D model 
+            if one wants to try, for example, different gas distributions while 
+            the dust distribution remains unchanged. 
 
     Example
     -------
