@@ -391,22 +391,27 @@ def upload_file(file):
     return File(x,y,name)
 
 
-def make_density_profile(Rin,Rout,Mdust,
-                        Rtap=None,epsilon=None,gamma=None,write=None):
+def make_density_profile(Rin,Rout,M,
+                         Rtap=None,
+                         epsilon=None,
+                         gamma=None,
+                         write=None,
+                         Sgm0=None):
 
     """
 
     Creates a surface density profile for a given value of the mass assuming an
-    exponential and tappered profile (see Portilla-Revelo et al. 2022, Eq.1)
+    exponential and tappered profile (see e.g., Eq. 1 in Portilla-Revelo et al. 2022)
 
     Parameters
     ----------
     Rin     : inner disk radius (au)
     Rout    : outer disk radius (au)
-    Mdust   : Mass of the disk (Msun)
+    M       : Mass of the disk (Msun)
     R_tap   : tappering radius of the disk (au)
     epsilon : exponent of the linear-decay part
     gamma   : exponent of the exponentia-decay part
+    Sgm0    : Boundary condition for Sigma (g/cm2)
 
     Output
     ------
@@ -417,14 +422,15 @@ def make_density_profile(Rin,Rout,Mdust,
     """
 
     # Number of sampling points
-    k = 10
-    N_points = 2**k+1
+    k           = 10
+    N_points    = 2**k+1
 
     # Dealing with input arguments
-    Rin = Rin*u.au
-    Rout = Rout*u.au
-    Mdust = Mdust*u.Msun
-    Rtap=Rtap*u.au if Rtap is not None else 100*u.au
+    Rin     = Rin*u.au
+    Rout    = Rout*u.au
+    M       = M*u.Msun
+    Rtap    = Rtap*u.au if Rtap is not None else 100*u.au
+
     if epsilon is None:epsilon=1.0
     if gamma is None:gamma=1.0
 
@@ -434,7 +440,7 @@ def make_density_profile(Rin,Rout,Mdust,
     # Finding Sigma0
     def integrand(x):
         return x * (Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
-    Sigma0=(Mdust / (2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2))
+    Sigma0=(M / (2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2))
     Sigma0=Sigma0.to(u.g/u.cm**2)
 
     # Sigma array
@@ -451,6 +457,27 @@ def make_density_profile(Rin,Rout,Mdust,
         for i,j in zip(rarray,Sigma):
             file.write("%.15e %.15e\n"%(i.value,j.value))
         file.close()
+
+    # If boundary condition at r=r0 is given
+    if Sgm0 is not None:
+
+        Sgm0=Sgm0*(u.g/u.cm**2)
+
+        Sigma0 = Sgm0/((Rtap/Rin)**epsilon * np.exp(-(Rin/Rtap)**(2-gamma)))
+        
+        Mass = (Sigma0 * 2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2).to(u.Msun)
+
+        Sigma=[]
+        for i in range(len(rarray)):
+            r=rarray[i].value
+            Sigma.append( Sigma0.value * (Rtap.value/r)**epsilon * np.exp(-(r/Rtap.value)**(2-gamma)) )
+        Sigma=np.array(Sigma)
+        Sigma=Sigma*(u.g/u.cm**2)
+        
+        print(Mass)
+        
+           
+
 
     return rarray,Sigma
 
