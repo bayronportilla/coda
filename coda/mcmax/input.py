@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 from astropy import units as u
 from scipy.integrate import romb,simps,quad,simpson
+
 @dataclass
 class File:
 
@@ -72,7 +73,6 @@ class File:
 
         plt.show()
 
-
     def rescale_mass(self,k=None,rlim=None,files=None,reeplace=None,type=None,
                     ylim=None,mass=None,epsilon=None,gamma=None,sigma=None,pivot=None):
 
@@ -88,10 +88,13 @@ class File:
         rlim        : (rmin,rmax) to only rescale the points with rmin <= r <= rmax.
                     If rlim is None, rescale the entire profile. [au,au] (tuple).
         files       : This performs a point-by-point rescaling of the density profile
-                    according to the ratio of R=file[0]/file[1]. It uses a linear
-                    interpolator to infer the values of the files at each self.x point.
-                    If out of bounds interpolation is required, it uses the extreme
-                    values of the files as boundary conditions. (list).
+                    according to the ratio of R=file[0]/file[1]. This is useful, for 
+                    example, when file[0] and file[1] are intensity profiles from an 
+                    optically thin tracer. The routine uses a linear interpolator to 
+                    infer the values of the files at each self.x point. If out of bounds, 
+                    interpolation will be required and it will use the extreme values 
+                    of the files as boundary conditions. User has to make sure that the 
+                    units in both columns of both files are the same. (list).
         reeplace    : It must be used alongside k and rlim. If True, it reeplaces
                     all the values within rlim by k.
         type        :
@@ -101,14 +104,11 @@ class File:
         x=(self.x*u.au).to(u.cm).value
         y=self.y
 
-
         Mold=(2*np.pi*simps(x*y,x)*u.g).to(u.Msun)
-
 
         # Rescale the whole profile by a constant factor
         if k is not None and rlim is None:
             ynew=k*y
-
 
         # Rescale between rmin and rmax by a constant factor
         if k is not None and rlim is not None:
@@ -152,39 +152,42 @@ class File:
                     else:
                         ynew+=[1*y[i]]
 
-        # Point-by-point rescaling using two input files
+
+        # Point-by-point rescale using input files
         if files is not None:
-
             # Load data
-            data_file_1 = np.loadtxt(files[0])
-            data_file_2 = np.loadtxt(files[1])
+            file1 = np.loadtxt(files[0])
+            file2 = np.loadtxt(files[1])
 
-            x_file_1 = np.reshape(data_file_1[:,0],data_file_1.shape[0])
-            y_file_1 = np.reshape(data_file_1[:,1],data_file_1.shape[0])
-            x_file_2 = np.reshape(data_file_2[:,0],data_file_2.shape[0])
-            y_file_2 = np.reshape(data_file_2[:,1],data_file_2.shape[0])
+            x1 = np.reshape(file1[:,0],file1.shape[0])
+            y1 = np.reshape(file1[:,1],file1.shape[0])
+            x2 = np.reshape(file2[:,0],file2.shape[0])
+            y2 = np.reshape(file2[:,1],file2.shape[0])
 
             # Interpolate files (linearly) onto model's grid
-            y_file_1_interp = np.interp(self.x, x_file_1, y_file_1)
-            y_file_2_interp = np.interp(self.x, x_file_2, y_file_2)
+            y1_interp = np.interp(self.x, x1, y1)
+            y2_interp = np.interp(self.x, x2, y2)
 
             # Do a check?
             ms=1
-            plt.plot(x_file_1,y_file_1,'+',markersize=5,label='$%s$ input'%files[0],color='black')
-            plt.plot(self.x,y_file_1_interp,'-',markersize=ms,label='$%s$ interpolated'%files[0],color='blue')
+            plt.plot(x1,y1,'+',markersize=5,label='$%s$ input'%files[0],color='black')
+            plt.plot(self.x,y1_interp,'-',markersize=ms,label='$%s$ interpolated'%files[0],color='blue')
 
-            plt.plot(x_file_2,y_file_2,'+',markersize=5,label='$%s$ input'%files[1],color='red')
-            plt.plot(self.x,y_file_2_interp,'-',markersize=ms,label='$%s$ interpolated'%files[1],color='green')
+            plt.plot(x2,y2,'+',markersize=5,label='$%s$ input'%files[1],color='red')
+            plt.plot(self.x,y2_interp,'-',markersize=ms,label='$%s$ interpolated'%files[1],color='green')
 
             #plt.plot(self.x,self.y,label='model',color='red')
             plt.legend(frameon=False)
             plt.show()
 
             # Built R coefficients
-            R_array = abs(y_file_1_interp/y_file_2_interp)
+            R_array = abs(y1_interp/y2_interp)
 
             # Built new density profile
             ynew=[i*j for i,j in zip(self.y,R_array)]
+
+            print(len(self.x))
+            print(len(ynew))
 
             # Plot final result
             plt.plot(self.x,self.y,label='initial density')
@@ -194,6 +197,7 @@ class File:
             plt.yscale('log')
             plt.show()
         
+
         # Reeplace points by a straight line
         if type=='linear':
 
@@ -396,7 +400,7 @@ def make_density_profile(Rin,Rout,M,
                          epsilon=None,
                          gamma=None,
                          write=None,
-                         Sgm0=None):
+                         Sigmain=None):
 
     """
 
@@ -411,8 +415,8 @@ def make_density_profile(Rin,Rout,M,
     R_tap   : tappering radius of the disk (au)
     epsilon : exponent of the linear-decay part
     gamma   : exponent of the exponentia-decay part
-    Sgm0    : Boundary condition for Sigma (g/cm2)
-
+    Sigmain : Boundary condition for the density at Rin (g/cm2)
+ 
     Output
     ------
     The array for the radial distance in au and the array for the surface density
@@ -444,12 +448,12 @@ def make_density_profile(Rin,Rout,M,
     Sigma0=Sigma0.to(u.g/u.cm**2)
 
     # Sigma array
-    Sigma=[]
+    Sigma = []
     for i in range(len(rarray)):
-        r=rarray[i].value
+        r = rarray[i].value
         Sigma.append( Sigma0.value * (Rtap.value/r)**epsilon * np.exp(-(r/Rtap.value)**(2-gamma)) )
-    Sigma=np.array(Sigma)
-    Sigma=Sigma*(u.g/u.cm**2)
+    Sigma = np.array(Sigma)
+    Sigma = Sigma*(u.g/u.cm**2)
 
     # Write to a file
     if write:
@@ -458,27 +462,23 @@ def make_density_profile(Rin,Rout,M,
             file.write("%.15e %.15e\n"%(i.value,j.value))
         file.close()
 
-    # If boundary condition at r=r0 is given
-    if Sgm0 is not None:
+    # If Sigmain is given
+    if Sigmain is not None:
 
-        Sgm0=Sgm0*(u.g/u.cm**2)
+        Sigmain = Sigmain*(u.g/u.cm**2)
+        Sigma0  = Sigmain/((Rtap/Rin)**epsilon * np.exp(-(Rin/Rtap)**(2-gamma)))
+        Mass    = (Sigma0 * 2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2).to(u.Msun)
 
-        Sigma0 = Sgm0/((Rtap/Rin)**epsilon * np.exp(-(Rin/Rtap)**(2-gamma)))
-        
-        Mass = (Sigma0 * 2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2).to(u.Msun)
-
-        Sigma=[]
+        Sigma = []
         for i in range(len(rarray)):
-            r=rarray[i].value
+            r = rarray[i].value
             Sigma.append( Sigma0.value * (Rtap.value/r)**epsilon * np.exp(-(r/Rtap.value)**(2-gamma)) )
-        Sigma=np.array(Sigma)
-        Sigma=Sigma*(u.g/u.cm**2)
+        
+        Sigma = np.array(Sigma)
+        Sigma = Sigma*(u.g/u.cm**2)
         
         print(Mass)
         
-           
-
-
     return rarray,Sigma
 
 
