@@ -575,25 +575,26 @@ def convert_density_file(model,
     *   The length of the r_array determines the resolution of the ProDiMo
         model. Choose it wisely!
 
-    *   This routine works only when the MCMax3D model has only *one* type of
-        particle; i.e., when there is only one 'computepartXX' keyword
+    *   This routine only works when the MCMax3D model has *one* type of
+        particle; this is, there is only one 'computepartXX' keyword
         in the input.dat file.
 
-    *   Before using this routine, you must have run a 'stop-after-init'
-        ProDiMo simulation. This is because you must have a grid where to interpolate the MCMax3D 
-        quntities.
+    *   Before using this routine, you must run a 'stop-after-init'
+        ProDiMo simulation. This is because there must exist a grid where to 
+        interpolate the MCMax3D quntities. Make sure this simulation has the
+        interface1D keyword set to False and the sdprofile.in is commented.
 
     *   The density profile inside the folder must be named as:
         'surface_density_PDS70_70_cropped.dat'
 
     *   This routine works only with 2D models.
 
-    *   MCMax3D model must have exclussively two zones---not one, not three...
+    *   MCMax3D model must have two zones---not one, not three...
 
     *   Rin and Rout must be equal to 0.04 au and 130 au respectively.
 
-    *   The number of radial grid points of the ProDiMo model must be equal to its 
-        MCMax3D counterpart.
+    *   The number of radial grid points (NXX) of the ProDiMo model must be 
+        equal to its MCMax3D counterpart.
 
     *   For production results, it is advisable to run the MCMax3D model with a
         refined radial grid, Nr>=60 per zone, as long as this is computationally
@@ -602,11 +603,11 @@ def convert_density_file(model,
     Parameters
     ----------
     model   : path to the MCMax3D model directory. (str).
-    g2d     : The gas-to-dust ratio. If g2d is None assume to be 100
+    g2d     : The gas-to-dust ratio. If g2d is None, assume to be 100
             everywhere. If g2d is a list and len(g2d)=1, use a constant g2d
             ratio of g2d[0]. If g2d is a two-column file containing the g2d ratio
-            (second column) in function of the distance in AU (first column), then
-            the g2d ratio will be interpolated at each radial point in the grid.
+            (second column) as a function of the distance in AU (first column), then
+            the g2d ratio will be interpolated at each radial point on the grid.
             A file containing the interpolated g2d ratio profile will be created.
     visual  : If true, shows the computed density profile for a selected dust
             sizes and also the reconstructed profile compared to the original one.
@@ -616,7 +617,7 @@ def convert_density_file(model,
     save    : Save to a fits file everything that is needed to create the sdprofile.in
             file. This way, it won't be needed to access the MCMax3D model 
             if one wants to try, for example, a different gas distribution while keeping
-            the dust distribution unchanged. THe file has 3 HDUs: hdu1=fsize,
+            the dust distribution unchanged. The file has 3 HDUs: hdu1=fsize,
             hdu2=r_array (cm), and hdu3=ai_array (cm).  
 
     Example
@@ -628,8 +629,8 @@ def convert_density_file(model,
     >>> nano Parameter.in
     >>> prodimo
 
-    2. In the directory of the ProDiMo model, open an ipython session and import
-    the modules
+    2. In the ProDiMo model directory, open an ipython session and import
+    the coda modules
     >>> ipython
     >>> from coda.mcmax import input
 
