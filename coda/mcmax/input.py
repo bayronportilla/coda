@@ -549,12 +549,17 @@ def convert_density_file(model,
                          Nzones,
                          g2d=None,
                          visual=None,
-                         find_dust_mass=None,
+                         find_dust_mass=False,
                          leftg2d=None,
                          save=None):
 
     '''
-    Convert an MCMax3D density field into a 1D sdfile.in for ProDiMo.
+    Convert an MCMax3D density field into a 1D sdfile.in for ProDiMo. 
+
+    The density fields for both codes are stored in multidimensional arrays.
+    M_mgc contains the MCMax3D field and M_pgc that of ProDiMo. Because of 
+    the internal differences between MCMax3D and ProDiMo, these arrays are 
+    defined in slightly different ways: 
 
                         r
                      ------>
@@ -602,23 +607,24 @@ def convert_density_file(model,
 
     Parameters
     ----------
-    model   : path to the MCMax3D model directory. (str).
-    g2d     : The gas-to-dust ratio. If g2d is None, assume to be 100
-            everywhere. If g2d is a list and len(g2d)=1, use a constant g2d
-            ratio of g2d[0]. If g2d is a two-column file containing the g2d ratio
-            (second column) as a function of the distance in AU (first column), then
-            the g2d ratio will be interpolated at each radial point on the grid.
-            A file containing the interpolated g2d ratio profile will be created.
-    visual  : If true, shows the computed density profile for a selected dust
-            sizes and also the reconstructed profile compared to the original one.
-            (Bool).
-    leftg2d : This sets the value of the g2d at those radial grid points to the
-            left of the minimum distance included in the g2d file. (float)
-    save    : Save to a fits file everything that is needed to create the sdprofile.in
-            file. This way, it won't be needed to access the MCMax3D model 
-            if one wants to try, for example, a different gas distribution while keeping
-            the dust distribution unchanged. The file has 3 HDUs: hdu1=fsize,
-            hdu2=r_array (cm), and hdu3=ai_array (cm).  
+    model           : path to the MCMax3D model directory. (str).
+    g2d             : The gas-to-dust ratio. If g2d is None, assume to be 100
+                    everywhere. If g2d is a list and len(g2d)=1, use a constant g2d
+                    ratio of g2d[0]. If g2d is a two-column file containing the g2d ratio
+                    (second column) as a function of the distance in AU (first column), then
+                    the g2d ratio will be interpolated at each radial point on the grid.
+                    A file containing the interpolated g2d ratio profile will be created.
+    visual          : If true, shows the computed density profile for a selected dust
+                    sizes and also the reconstructed profile compared to the original one.
+                    (Bool).
+    find_dust_mass  : Not yet available. 
+    leftg2d         : This sets the value of the g2d at those radial grid points to the
+                    left of the minimum distance included in the g2d file. (float)
+    save            : Save to a fits file everything that is needed to create the sdprofile.in
+                    file. This way, it won't be needed to access the MCMax3D model 
+                    if one wants to try, for example, a different gas distribution while keeping
+                    the dust distribution unchanged. The file has 3 HDUs: hdu1=fsize,
+                    hdu2=r_array (cm), and hdu3=ai_array (cm).  
 
     Example
     -------
@@ -653,19 +659,23 @@ def convert_density_file(model,
         comp        : float
 
         def dV(self):
+
             # Units: cm^3
 
-            dr=self.r_max-self.r_min
-            dtheta=self.theta_max-self.theta_min
-            dphi=self.phi_max-self.phi_min
+            dr      = self.r_max-self.r_min
+            dtheta  = self.theta_max-self.theta_min
+            dphi    = self.phi_max-self.phi_min
 
-            value=self.r**2*np.sin(self.theta)*dr*dtheta*dphi
+            value   = self.r**2*np.sin(self.theta)*dr*dtheta*dphi
 
             return value
 
         def dz(self):
+
             # Units: cm
-            value=self.r*self.dtheta
+
+            value   = self.r*self.dtheta
+
             return value
 
         def zsphere(self):
@@ -729,20 +739,15 @@ def convert_density_file(model,
 
             return value
 
-
-    # Computing psize
+    # Computing grain size distribution from MCMax3D
     print("\n Retrieving dust size distribution from MCMax3D model... \n")
-    psize=get_size_distribution(model)
+    psize       = get_size_distribution(model)
+    ai_array    = psize[:,0] # microns
 
-    ai_array=psize[:,0] # microns
-
-
-
-
-    # Reading input file to get zone limits
-    Rin_array=[]
-    Rout_array=[]
-    infile=open(model+"/input.dat").readlines()
+    # Read input file to get zone limits. --> automate this step <--
+    Rin_array   = []
+    Rout_array  = []
+    infile      = open(model+"/input.dat").readlines()
 
     for i in range(1,Nzones+1):
 
@@ -756,66 +761,67 @@ def convert_density_file(model,
                 Rout=float(line.split("=")[1])
                 Rout_array.append(Rout)
 
-
     def func_fsize(zoneID):
+
         # Import data from zones
         hdu_1=fits.open(model+"/output/Zone000%d.fits.gz"%(zoneID))
+ 
+        '''
+        Read mass density matrix (g cm^-3). The sixth HDU (zero-based) of 
+        Zone000X.fits.gz is a six dimensional array each entry containing the
+        mass density per grain size at each location in the grid: 
+        
+        HDU[6] = rho(r, theta, phi, computepart, asize, 1 (always 1 unless opacities depend on Td))
+        '''
 
-        # Mass density matrix (g cm^-3)
-        # Remember that C[3]=pmid(rad), C[4]=tmid(rad), C[5]=rmid(au)
         C=hdu_1[6].data
 
-        # Coordinates at cell center
-        rmidAU=hdu_1[0].data[0,0,0,:]
-        rmid=(rmidAU*u.au).to(u.cm).value # cm
-        tmid=hdu_1[0].data[1,0,:,0]       # rad
-        pmid=hdu_1[0].data[2,:,0,0]       # rad
+        '''  
+        When you read the fits with python, the axes are read in reverse
+        order so that C[3]=pmid(rad), C[4]=tmid(rad), C[5]=rmid(au).     
+        '''
 
+        # Coordinates of cell centers
+        
+        '''
+        HDU[0] contains the the value of the spherical coordinates at each grid point 
+        HDU[0] = coordinate_value(r, theta, phi, coordinate) 
+        '''
+
+        rmidAU  = hdu_1[0].data[0,0,0,:]       # au
+        tmid    = hdu_1[0].data[1,0,:,0]       # rad
+        pmid    = hdu_1[0].data[2,:,0,0]       # rad
+        rmid    = (rmidAU*u.au).to(u.cm).value # cm
+        
         # Coordinates at cell border
-        rlim=hdu_1[1].data   # cm
-        tlim=hdu_1[2].data   # rad
-        plim=hdu_1[3].data   # rad
+        rlim    = hdu_1[1].data   # r grid (cm)
+        tlim    = hdu_1[2].data   # theta grid (rad)
+        plim    = hdu_1[3].data   # phi (rad)
+        
+        # Correcting for radius at the inner and outer edge of the disk
+        if zoneID == 1:
+            rmidAU_min  = Rin_array[zoneID-1]
+            rmid_min    = (rmidAU_min*u.au).to(u.cm).value
+            rmidAU[0]   = rmidAU_min
+            rmid[0]     = rmid_min
 
-        """
-        # Correcting for radius
-        if zoneID==1:
-            rmidAU_min=0.04
-            rmid_min=(rmidAU_min*u.au).to(u.cm).value
-            rmidAU[0]=rmidAU_min
-            rmid[0]=rmid_min
+        if zoneID == Nzones:
+            rmidAU_max  = Rout_array[-1]
+            rmid_max    = (rmidAU_max*u.au).to(u.cm).value
+            rmidAU[-1]  = rmidAU_max
+            rmid[-1]    = rmid_max
 
-        if zoneID==2:
-            rmidAU_max=130.0
-            rmid_max=(rmidAU_max*u.au).to(u.cm).value
-            rmidAU[-1]=rmidAU_max
-            rmid[-1]=rmid_max
-        """
-        # Correcting for radius at the inner and outer edge of the PPD
-        if zoneID==1:
-            rmidAU_min=Rin_array[zoneID-1]
-            rmid_min=(rmidAU_min*u.au).to(u.cm).value
-            rmidAU[0]=rmidAU_min
-            rmid[0]=rmid_min
+        # Correcting theta
+        tmid[int(len(tmid)*0.5-1)] = (90.0*u.deg).to(u.rad).value
+        
+        '''
+        Declare matrix required for interpolation. Dim: len(theta)/2 x len(radius). 
+        Each entry in the matrix is an instance of the CellMcmax class.
+        '''
 
-        if zoneID==Nzones:
-            rmidAU_max=Rout_array[-1]
-            rmid_max=(rmidAU_max*u.au).to(u.cm).value
-            rmidAU[-1]=rmidAU_max
-            rmid[-1]=rmid_max
-
-
-        # Correcting for theta
-        theta_midplane=(90.0*u.deg).to(u.rad).value
-        tmid[int(len(tmid)*0.5-1)]=theta_midplane
-
-
-        # Declare matrix required for interpolation
-        # Dim: len(theta)/2 x len(radius). Each entry is an instance of the
-        # CellMcmax class.
         M_mgc=np.empty((int(len(tmid)*0.5),len(rmid)),dtype='object')
 
-
-        if find_dust_mass is True:
+        if find_dust_mass is True: # --> Finish and benchmark this step <--
             # The big loop
             for i in range(C.shape[5]):             # Along r
                 for j in range(C.shape[4]):         # Along theta
@@ -845,7 +851,9 @@ def convert_density_file(model,
                         continue
 
         return rmidAU,M_mgc
-
+    
+    print(func_fsize(1)[1][-1,1].comp)
+    sys.exit()
 
     # Read and concatenate fsizes and rmidAU
     for i in range(1,Nzones+1):
@@ -855,6 +863,10 @@ def convert_density_file(model,
         else:
             r_array=np.concatenate((r_array,func_fsize(i)[0]))
             M_mgc_full=np.concatenate((M_mgc_full,func_fsize(i)[1]),axis=1)
+
+    # Do we see more dust in the cavity in MCMax3D data?
+    print(M_mgc_full[0][0])
+    #sys.exit()
 
     """
     rmidAU_1, M_mgc_1 = func_fsize(1)[0], func_fsize(1)[1]
@@ -928,7 +940,6 @@ def convert_density_file(model,
         print("z_max_prodimo > z_max_mcmax %.15f and %.15f"%(zmax_grid_prodimo,zmax_grid_mcmax))
 
     # Do 2D interpolation. Sampling MCMax3D info into 1D arrays.
-    #for k in range(psize.shape[0]):
     for k in range(psize.shape[0]):
         rsph_array=[]
         zsph_array=[]
