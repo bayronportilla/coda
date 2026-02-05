@@ -22,3 +22,6 @@ from astropy.convolution import convolve,Gaussian2DKernel
 from matplotlib.colors import LogNorm
 #from astropy.modeling import models
 from scipy import optimize
+from radmc3dPy import analyze
+
+

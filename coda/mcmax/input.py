@@ -1,3 +1,4 @@
+from __future__ import annotations
 from coda.mcmax.header import *
 from dataclasses import dataclass
 import numpy as np
@@ -1493,5 +1494,87 @@ def hd_with_settling(agrain,r,Sigmag,
     # Calculate scale height for size s
     hd_rs = hg * (f_rs/(1+f_rs))**0.5
 
-
     return hd_rs
+
+
+def compare(pdm: prodimopy.read.read_prodimo, 
+            rdm: radmc3dPy.analyze.readData):
+
+    xpdm = pdm.x[:,0]
+    xrdm = (rdm.grid.x*u.cm).to(u.au).value
+
+
+    """ Check dust mass """
+    def check_dust_mass():
+    
+        mdust_pdm = (np.sum(pdm.rhod*pdm.vol)*u.g).to(u.Msun).value
+        mdust_rdm = (rdm.getDustMass()*u.g).to(u.Msun).value
+        
+        err = 100 * ( abs(mdust_pdm - mdust_rdm)/mdust_pdm )
+
+        print("Dust mass prodimo (Msun): ", mdust_pdm)
+        print("Dust mass radmc3d (Msun): ", mdust_rdm)
+        print(f"Relative error |mdust_pro-mdust_rad|/mdust_pro x 100 = {err:.2f}%")
+
+        return None
+
+    #check_dust_mass()
+
+
+    """ Check surface density profile """
+    def check_sigmad():
+
+        rdm.getSigmaDust()
+
+        sigmad_pdm = 2*pdm.sdd[:,0]
+        sigmad_rdm = rdm.sigmadust[:,0]
+
+        # Find shared spatial grid
+        xmin = max(xpdm.min(),xrdm.min())
+        xmax = min(xpdm.max(),xrdm.max())
+        xcommon = np.linspace(xmin,xmax,1000)
+
+        # Interpolate to common axis
+        sigmad_pdm_int = np.interp(xcommon,xpdm,sigmad_pdm)  
+        sigmad_rdm_int = np.interp(xcommon,xrdm,sigmad_rdm) 
+
+        # Find relative error
+        err = (sigmad_pdm_int-sigmad_rdm_int)/sigmad_pdm_int
+
+        # Plot
+        fig,(ax1,ax2) = plt.subplots(nrows=2)
+        ax1.loglog(xpdm,sigmad_pdm,'.',label='prodimo')
+        ax1.loglog(xrdm,sigmad_rdm,'+',label='radmc3d')
+        ax1.set_ylabel("sigmad (g/cm2)")
+        ax1.legend()
+        
+        ax2.plot(xcommon,err)
+        ax2.set_xlabel("r (au)")
+        ax2.axhspan(-0.1,0.1,color='grey',alpha=0.25)
+        ax2.set_ylim(-1,1)
+        ax2.set_ylabel("err")
+        
+        plt.show()
+        
+        return None
+    
+    #check_sigmad()
+
+
+    """ Check density maps """
+    def check_rhod():
+        
+        # Plot
+        fig,(ax1,ax2) = plt.subplots(ncols=2)
+        ax1.contourf(pdm.x,pdm.z,pdm.rhod)
+        
+        plt.show()
+
+        return None
+    
+    check_rhod()
+
+    
+
+
+    return None
