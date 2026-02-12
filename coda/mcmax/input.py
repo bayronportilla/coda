@@ -1553,6 +1553,8 @@ def compare(pdm: prodimopy.read.read_prodimo,
         ax2.axhspan(-0.1,0.1,color='grey',alpha=0.25)
         ax2.set_ylim(-1,1)
         ax2.set_ylabel("err")
+
+        fig.suptitle("Check surface density")
         
         plt.show()
         
@@ -1560,19 +1562,63 @@ def compare(pdm: prodimopy.read.read_prodimo,
     
     #check_sigmad()
 
+    
+    def spherical_to_cylindrical():
+        '''
+        Docstring for spherical_to_cylindrical
+        '''
+
+        rs = rdm.grid.x # array of radii (cm)
+        ts = rdm.grid.y # array of thetas (rad)
+        ps = rdm.grid.z # array of phis (rad)
+
+        if len(ps) == 1:
+            # Create spherical meshgrid
+            RS,TS = np.meshgrid(rs,ts,indexing='ij')
+
+            # Convert meshgrid from spherical to cylindrical coordinates 
+            RHOS = RS*np.sin(TS) # cm
+            ZS   = RS*np.cos(TS) # cm
+
+            # Create 2D interpolator to map rdm.rhodust into cylindrical meshgrid
+            interp = RegularGridInterpolator((rs,ts),rdm.rhodust[:,:,0,0],bounds_error=False)
+
+            print(interp([RHOS[40,0],ZS[40,0]]))
+            #print(RHOS)
+
+            
+
+        else:
+            print("Sorry, I cannot handle 3D geometries yet")
+
+
+
+
+
+        
+        
+        return None
+    
+    spherical_to_cylindrical()
+
 
     """ Check density maps """
     def check_rhod():
         
+        """
         # Plot
         fig,(ax1,ax2) = plt.subplots(ncols=2)
         ax1.contourf(pdm.x,pdm.z,pdm.rhod)
+        ax1.set_title("prodimo")
+
+        #ax2.contourf(pdm.x,pdm.z,pdm.rhod)
+        ax2.set_title("radmc3d")
         
         plt.show()
 
         return None
-    
-    check_rhod()
+        """
+    #check_rhod()
 
     
 
