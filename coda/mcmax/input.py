@@ -1563,62 +1563,87 @@ def compare(pdm: prodimopy.read.read_prodimo,
     #check_sigmad()
 
     
-    def spherical_to_cylindrical():
+    def interpolate_rhod_rdm_onto_pdm():
         '''
         Docstring for spherical_to_cylindrical
         '''
 
-        rs = rdm.grid.x # array of radii (cm)
-        ts = rdm.grid.y # array of thetas (rad)
-        ps = rdm.grid.z # array of phis (rad)
+        rs_rdm = rdm.grid.x # array of radii (cm)
+        ts_rdm = rdm.grid.y # array of thetas (rad)
+        ps_rdm = rdm.grid.z # array of phis (rad)
 
-        if len(ps) == 1:
-            # Create spherical meshgrid
-            RS,TS = np.meshgrid(rs,ts,indexing='ij')
+        if len(ps_rdm) == 1:
+            # Create 2D interpolator to map rdm.rhodust onto cylindrical meshgrid            
+            interp = RegularGridInterpolator((rs_rdm,ts_rdm),rdm.rhodust[:,:,0,0],bounds_error=False)
 
-            # Convert meshgrid from spherical to cylindrical coordinates 
-            RHOS = RS*np.sin(TS) # cm
-            ZS   = RS*np.cos(TS) # cm
+            # Get prodimo grid
+            xs_pdm = (pdm.x*u.au).to(u.cm).value
+            zs_pdm = (pdm.z*u.au).to(u.cm).value 
 
-            # Create 2D interpolator to map rdm.rhodust into cylindrical meshgrid
-            interp = RegularGridInterpolator((rs,ts),rdm.rhodust[:,:,0,0],bounds_error=False)
+            # Convert ProDiMo cylyndrical grid onto radmc3d spherical grid            
+            rs_pdm = (xs_pdm**2 + zs_pdm**2)**0.5
+            ts_pdm = np.arctan(xs_pdm/zs_pdm)
 
-            print(interp([RHOS[40,0],ZS[40,0]]))
-            #print(RHOS)
-
+            # Define array for radmc3d rhodust values interpolated on ProDiMo grid
+            rhodust_rdm_onto_pdm = np.zeros(pdm.rhod.shape)            
             
-
+            # Interpolate dust density onto ProDiMo grid
+            count=0
+            for i in range(rhodust_rdm_onto_pdm.shape[0]):
+                for j in range(rhodust_rdm_onto_pdm.shape[1]):
+                    rhodust_rdm_onto_pdm[i,j] = interp([rs_pdm[i,j],ts_pdm[i,j]])
+                    count+=1
+                    print("Points interpolated: %d/%d"%(count,rhodust_rdm_onto_pdm.size))
         else:
             print("Sorry, I cannot handle 3D geometries yet")
-
-
-
-
-
         
-        
-        return None
-    
-    spherical_to_cylindrical()
+        return rhodust_rdm_onto_pdm
 
 
     """ Check density maps """
     def check_rhod():
         
-        """
-        # Plot
-        fig,(ax1,ax2) = plt.subplots(ncols=2)
-        ax1.contourf(pdm.x,pdm.z,pdm.rhod)
-        ax1.set_title("prodimo")
+        # Interpolate radmc3d rhod onto ProDiMo grid
+        rhod_rdm_onto_pdm = interpolate_rhod_rdm_onto_pdm()
+        residual_map = (pdm.rhod-rhod_rdm_onto_pdm)/pdm.rhod
 
-        #ax2.contourf(pdm.x,pdm.z,pdm.rhod)
-        ax2.set_title("radmc3d")
+        residual_map_flat = residual_map.flatten()
+        residual_map_flat_no_nans = residual_map_flat[~np.isnan(residual_map_flat)]
         
+        plt.hist(residual_map_flat_no_nans,density=True,bins=50)
         plt.show()
 
+        print(np.nanmin(residual_map))   
+        print(np.nanmax(residual_map))
+        '''
+        # Plot
+        fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(12,4))
+        
+        # ProDiMo
+        cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod))
+        cbar1 = fig.colorbar(cs1,ax=ax1)
+        cbar1.set_label("log10 rhod")
+        ax1.set_title("ProDiMo")
+
+        # radmc3d
+        cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm))
+        cbar2 = fig.colorbar(cs2,ax=ax2)
+        cbar2.set_label("log10 rhod")
+        ax2.set_title("radmc3d interpolated")
+
+        # Residuals
+        cs3 = ax3.contourf(pdm.x,pdm.z,residual_map)
+        cbar3 = fig.colorbar(cs3,ax=ax3)
+        ax3.set_title("ProDiMo - radmc3d ")
+
+        plt.tight_layout()
+        plt.show()
+        '''
+        
         return None
-        """
-    #check_rhod()
+        
+        
+    check_rhod()
 
     
 
