@@ -1605,40 +1605,93 @@ def compare(pdm: prodimopy.read.read_prodimo,
         
         # Interpolate radmc3d rhod onto ProDiMo grid
         rhod_rdm_onto_pdm = interpolate_rhod_rdm_onto_pdm()
-        residual_map = (pdm.rhod-rhod_rdm_onto_pdm)/pdm.rhod
-
+        residual_map = (pdm.rhod-rhod_rdm_onto_pdm)
         residual_map_flat = residual_map.flatten()
-        residual_map_flat_no_nans = residual_map_flat[~np.isnan(residual_map_flat)]
-        
-        plt.hist(residual_map_flat_no_nans,density=True,bins=50)
-        plt.show()
+        residual_map_flat_nonans = residual_map_flat[~np.isnan(residual_map_flat)] 
 
-        print(np.nanmin(residual_map))   
-        print(np.nanmax(residual_map))
-        '''
+        # Find stats 
+        mu = np.mean(residual_map_flat_nonans)
+        std = np.std(residual_map_flat_nonans)
+        standard_residual_map = (residual_map-mu)/std
+        standard_residual_map_masked = np.ma.masked_invalid(standard_residual_map)
+        #print(standard_residual_map_masked.min())
+        #print(standard_residual_map_masked.max())
+        
+        # Choose a point within the radmc3d-interpolated and prodimo domains
+        xp = 6.6
+        zp = 6.0
+        idxp = abs(pdm.x[:,0]-xp).argmin()
+        idzp = abs(pdm.z[idxp,:]-zp).argmin()
+        rhod_p_pdm = pdm.rhod[idxp,idzp]
+        rhod_p_rdm = rhod_rdm_onto_pdm[idxp,idzp]    
+        diff = ( abs(rhod_p_rdm-rhod_p_pdm)/rhod_p_pdm )*100
+
+        #print(residual_map_flat_nonans)
+        #sys.exit()
+        #residual_map_flat_positive = residual_map_flat[residual_map_flat>0]
+        #residual_map_flat_negative = residual_map_flat[residual_map_flat<0]
+
+        #print(len(residual_map_flat))
+        #print(len(residual_map_flat_positive))
+        #print(len(residual_map_flat_negative))
+
+        #sys.exit()
+        
+        #plt.hist(standard_residual_map.flatten(),density=True,bins=25) # There are positive values, why?!!!!!
+        #plt.show()
+
+        #print(np.nanmin(residual_map))   
+        #print(np.nanmax(residual_map))
+    
         # Plot
         fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(12,4))
-        
+        xmax = 10 
+        zmax = 10
+
         # ProDiMo
         cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod))
         cbar1 = fig.colorbar(cs1,ax=ax1)
+        ax1.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar1.set_label("log10 rhod")
+        ax1.text(0.05,0.95,'xp = %d'%xp,transform=ax1.transAxes)
+        ax1.text(0.05,0.90,'zp = %d'%zp,transform=ax1.transAxes)
+        ax1.text(0.05,0.85,'rhod(xp,zp) = %.2e'%rhod_p_pdm,transform=ax1.transAxes)
+        ax1.set_xlim(None,xmax)
+        ax1.set_ylim(None,zmax)
+
         ax1.set_title("ProDiMo")
 
         # radmc3d
         cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm))
         cbar2 = fig.colorbar(cs2,ax=ax2)
+        ax2.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar2.set_label("log10 rhod")
+        ax2.text(0.05,0.95,'xp = %d'%xp,transform=ax2.transAxes)
+        ax2.text(0.05,0.90,'zp = %d'%zp,transform=ax2.transAxes)
+        ax2.text(0.05,0.85,'rhod(xp,zp) = %.2e'%rhod_p_rdm,transform=ax2.transAxes)
+        ax2.set_xlim(None,xmax)
+        ax2.set_ylim(None,zmax)
         ax2.set_title("radmc3d interpolated")
 
         # Residuals
-        cs3 = ax3.contourf(pdm.x,pdm.z,residual_map)
+        vmin = -0.5
+        vmax = +0.5
+        levels = np.linspace(vmin,vmax,21) 
+        cs3 = ax3.contourf(pdm.x,pdm.z,standard_residual_map_masked,
+                           vmin=vmin,vmax=vmax,levels=levels)
+        ax3.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar3 = fig.colorbar(cs3,ax=ax3)
+        ax3.text(0.05,0.95,'xp = %d'%xp,transform=ax3.transAxes)
+        ax3.text(0.05,0.90,'zp = %d'%zp,transform=ax3.transAxes)
+        ax3.text(0.05,0.85,'relative diff. = %.1f%%'%diff,transform=ax3.transAxes)
+        ax3.set_xlim(None,xmax)
+        ax3.set_ylim(None,zmax)
+
         ax3.set_title("ProDiMo - radmc3d ")
 
         plt.tight_layout()
         plt.show()
-        '''
+        
         
         return None
         
