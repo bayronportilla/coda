@@ -1605,10 +1605,19 @@ def compare(pdm: prodimopy.read.read_prodimo,
         
         # Interpolate radmc3d rhod onto ProDiMo grid
         rhod_rdm_onto_pdm = interpolate_rhod_rdm_onto_pdm()
-        residual_map = (pdm.rhod-rhod_rdm_onto_pdm)
+        residual_map = pdm.rhod-rhod_rdm_onto_pdm
         residual_map_flat = residual_map.flatten()
         residual_map_flat_nonans = residual_map_flat[~np.isnan(residual_map_flat)] 
 
+        
+        flat_index=np.nanargmin(residual_map)
+        row,col = np.unravel_index(flat_index,residual_map.shape)
+        print(row,col)
+        print(pdm.rhod[row,col])
+        print(rhod_rdm_onto_pdm[row,col])
+        print(abs(rhod_rdm_onto_pdm[row,col]-pdm.rhod[row,col])/pdm.rhod[row,col])
+        print(np.nanmin(residual_map))
+        #sys.exit()
         # Find stats 
         mu = np.mean(residual_map_flat_nonans)
         std = np.std(residual_map_flat_nonans)
@@ -1618,8 +1627,8 @@ def compare(pdm: prodimopy.read.read_prodimo,
         #print(standard_residual_map_masked.max())
         
         # Choose a point within the radmc3d-interpolated and prodimo domains
-        xp = 6.6
-        zp = 6.0
+        xp = 0.1
+        zp = 0.02
         idxp = abs(pdm.x[:,0]-xp).argmin()
         idzp = abs(pdm.z[idxp,:]-zp).argmin()
         rhod_p_pdm = pdm.rhod[idxp,idzp]
@@ -1642,36 +1651,61 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
         #print(np.nanmin(residual_map))   
         #print(np.nanmax(residual_map))
+
+        # Get extreme values
+        rhod_max_pdm = np.nanmax(pdm.rhod)
+        rhod_min_pdm = np.nanmin(pdm.rhod)
+        rhod_max_rdm = np.nanmax(rhod_rdm_onto_pdm)
+        rhod_min_rdm = np.nanmin(rhod_rdm_onto_pdm)
+
+        print(rhod_max_pdm)
     
+    
+        #print("radmc3d grid size nr: ",rdm.grid.nx)
         # Plot
         fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(12,4))
-        xmax = 10 
-        zmax = 10
+        xmax = 1 
+        zmax = 1
+
+        levels = np.logspace(np.log10(rhod_min_pdm),np.log10(rhod_max_pdm),15)
 
         # ProDiMo
-        cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod))
+        cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod),
+                           levels=np.log10(levels))
         cbar1 = fig.colorbar(cs1,ax=ax1)
         ax1.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar1.set_label("log10 rhod")
-        ax1.text(0.05,0.95,'xp = %d'%xp,transform=ax1.transAxes)
-        ax1.text(0.05,0.90,'zp = %d'%zp,transform=ax1.transAxes)
-        ax1.text(0.05,0.85,'rhod(xp,zp) = %.2e'%rhod_p_pdm,transform=ax1.transAxes)
+        ax1.text(0.05,0.95,'xp = %d' % xp,transform=ax1.transAxes)
+        ax1.text(0.05,0.90,'zp = %d' % zp,transform=ax1.transAxes)
+        ax1.text(0.05,0.85,'rhod(xp,zp) = %.2e' % rhod_p_pdm,transform=ax1.transAxes)
+        ax1.text(0.05,0.75,'rhod_min = %.2e' % rhod_min_pdm,transform=ax1.transAxes)
+        ax1.text(0.05,0.70,'rhod_max = %.2e' % rhod_max_pdm,transform=ax1.transAxes)
+
         ax1.set_xlim(None,xmax)
         ax1.set_ylim(None,zmax)
-
         ax1.set_title("ProDiMo")
-
+        
         # radmc3d
-        cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm))
+        #levels = np.linspace(rhod_min_pdm,rhod_max_pdm,100)
+        
+        
+        #cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm),
+        #                   vmin=np.log10(rhod_min_pdm),
+        #                   vmax=np.log10(rhod_max_pdm))
+        
+        cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm),
+                           levels=np.log10(levels))
         cbar2 = fig.colorbar(cs2,ax=ax2)
         ax2.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar2.set_label("log10 rhod")
         ax2.text(0.05,0.95,'xp = %d'%xp,transform=ax2.transAxes)
         ax2.text(0.05,0.90,'zp = %d'%zp,transform=ax2.transAxes)
         ax2.text(0.05,0.85,'rhod(xp,zp) = %.2e'%rhod_p_rdm,transform=ax2.transAxes)
+        ax2.text(0.05,0.75,'rhod_min = %.2e' % rhod_min_rdm,transform=ax2.transAxes)
+        ax2.text(0.05,0.70,'rhod_max = %.2e' % rhod_max_rdm,transform=ax2.transAxes)
         ax2.set_xlim(None,xmax)
         ax2.set_ylim(None,zmax)
-        ax2.set_title("radmc3d interpolated")
+        ax2.set_title("radmc3d, interpolated")
 
         # Residuals
         vmin = -0.5
