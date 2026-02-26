@@ -1620,20 +1620,17 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
         # Check how many points could not be interpolated due to 
         # boundary overflows
-        number_of_nans = np.sum(np.isnan(rhod_rdm_onto_pdm)) # np.sum add the Trues(1) and Falses(0)
+        mask_of_nans = np.isnan(rhod_rdm_onto_pdm) 
+        number_of_nans = np.sum(mask_of_nans) # np.sum adds up the Trues(1) and Falses(0)
         grid_size = rhod_rdm_onto_pdm.size
         frac_of_nans = number_of_nans / grid_size
         print("There are %d NaN out of %d grid points."%(number_of_nans,grid_size))
         print("Fraction of nans is %.2f"%(frac_of_nans))
         
-        print(np.isnan(rhod_rdm_onto_pdm).any())
         if number_of_nans != 0:
-            masked_rhod_pdm = ~np.isnan(rhod_rdm_onto_pdm)*pdm.rhod
-            masked_rhod_rdm = np.nan_to_num(rhod_rdm_onto_pdm,nan=0.0)
+            masked_rhod_pdm[mask_of_nans] = np.nan
         else:
             masked_rhod_pdm = pdm.rhod
-            masked_rhod_rdm = rhod_rdm_onto_pdm
-
 
         # Compute residual map
         residual_map = ( masked_rhod_pdm - masked_rhod_rdm ) / pdm.rhod
