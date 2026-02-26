@@ -1503,7 +1503,6 @@ def compare(pdm: prodimopy.read.read_prodimo,
     xpdm = pdm.x[:,0]
     xrdm = (rdm.grid.x*u.cm).to(u.au).value
 
-
     """ Check dust mass """
     def check_dust_mass():
     
@@ -1621,6 +1620,8 @@ def compare(pdm: prodimopy.read.read_prodimo,
         # Check how many points could not be interpolated due to 
         # boundary overflows
         mask_of_nans = np.isnan(rhod_rdm_onto_pdm) 
+        rhod_rdm_onto_pdm_norm = rhod_rdm_onto_pdm/rhod_rdm_onto_pdm
+        masked_rhod_pdm = pdm.rhod
         number_of_nans = np.sum(mask_of_nans) # np.sum adds up the Trues(1) and Falses(0)
         grid_size = rhod_rdm_onto_pdm.size
         frac_of_nans = number_of_nans / grid_size
@@ -1628,45 +1629,29 @@ def compare(pdm: prodimopy.read.read_prodimo,
         print("Fraction of nans is %.2f"%(frac_of_nans))
         
         if number_of_nans != 0:
-            masked_rhod_pdm[mask_of_nans] = np.nan
-        else:
-            masked_rhod_pdm = pdm.rhod
+            masked_rhod_pdm = pdm.rhod * rhod_rdm_onto_pdm_norm
 
         # Compute residual map
-        residual_map = ( masked_rhod_pdm - masked_rhod_rdm ) / pdm.rhod
+        residual_map = ( masked_rhod_pdm - rhod_rdm_onto_pdm ) / masked_rhod_pdm
 
         # Get maximum relative difference        
-        r_diff_max, z_diff_max = np.unravel_index((abs(residual_map)).argmax(),residual_map.shape)
-        rhod_diff_max = residual_map[r_diff_max,z_diff_max]
-
-
-
+        r_diff_max,z_diff_max = np.unravel_index(np.nanargmax(abs(residual_map)),residual_map.shape)
+        xp_max = pdm.x[r_diff_max,z_diff_max]
+        zp_max = pdm.z[r_diff_max,z_diff_max]
+        max_diff = abs(residual_map[r_diff_max,z_diff_max])*100
         
-        #flat_index=np.nanargmin(residual_map)
-        #flat_index = np.argmax(arr)
-        #sys.exit()
-        
-        #sys.exit()
         # Find stats 
-        '''
-        mu = np.mean(residual_map_flat_nonans)
-        std = np.std(residual_map_flat_nonans)
-        standard_residual_map = (residual_map-mu)/std
-        standard_residual_map_masked = np.ma.masked_invalid(standard_residual_map)
-        '''
-        #print(standard_residual_map_masked.min())
-        #print(standard_residual_map_masked.max())
-        
+        residual_map_flat = residual_map.flatten()
+        residual_map_flat_noNan = residual_map_flat[~np.isnan(residual_map_flat)]
+
         # Choose a point within the radmc3d-interpolated and prodimo domains
-        xp = 0.1
-        zp = 0.02
+        xp = 7.70
+        zp = 6.94
         idxp = abs(pdm.x[:,0]-xp).argmin()
         idzp = abs(pdm.z[idxp,:]-zp).argmin()
         rhod_p_pdm = pdm.rhod[idxp,idzp]
         rhod_p_rdm = rhod_rdm_onto_pdm[idxp,idzp]    
         diff = ( abs(rhod_p_rdm-rhod_p_pdm)/rhod_p_pdm )*100
-
-        
 
         # Get extreme values
         rhod_max_pdm = np.nanmax(pdm.rhod)
@@ -1674,30 +1659,31 @@ def compare(pdm: prodimopy.read.read_prodimo,
         rhod_max_rdm = np.nanmax(rhod_rdm_onto_pdm)
         rhod_min_rdm = np.nanmin(rhod_rdm_onto_pdm)
 
-        # Plot
-        fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(12,4))
-        xmax = 1
-        zmax = 1
-
+        # Get levels for contourf
         levels = np.logspace(np.log10(rhod_min_pdm),np.log10(rhod_max_pdm),15)
 
-        
+        # Plot
+        fig,((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2,figsize=(10,8))
+        xmax = 10
+        zmax = 10
+
         # ProDiMo
         cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod),
                            levels=np.log10(levels))
         cbar1 = fig.colorbar(cs1,ax=ax1)
         ax1.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar1.set_label("log10 rhod")
-        ax1.text(0.05,0.95,'xp = %d' % xp,transform=ax1.transAxes)
-        ax1.text(0.05,0.90,'zp = %d' % zp,transform=ax1.transAxes)
-        ax1.text(0.05,0.85,'rhod(xp,zp) = %.2e' % rhod_p_pdm,transform=ax1.transAxes)
-        ax1.text(0.05,0.75,'rhod_min = %.2e' % rhod_min_pdm,transform=ax1.transAxes)
-        ax1.text(0.05,0.70,'rhod_max = %.2e' % rhod_max_pdm,transform=ax1.transAxes)
-
+        ax1.text(0.05,0.95,'rp = %.2f' % xp,transform=ax1.transAxes)
+        ax1.text(0.05,0.90,'zp = %.2f' % zp,transform=ax1.transAxes)
+        ax1.text(0.05,0.85,'rhod(rp,zp) = %.2e' % rhod_p_pdm,transform=ax1.transAxes)
+        ax1.text(0.05,0.75,'rp_max = %.2f' % xp_max,transform=ax1.transAxes)
+        ax1.text(0.05,0.70,'rp_max = %.2f' % zp_max,transform=ax1.transAxes)
+        ax1.scatter(xp_max,zp_max,marker='o',color='red')
         ax1.set_xlim(None,xmax)
         ax1.set_ylim(None,zmax)
+        ax1.set_xlabel('r (au)')
+        ax1.set_ylabel('z (au)')
         ax1.set_title("ProDiMo")
-        
         
         # radmc3d
         cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm),
@@ -1705,30 +1691,37 @@ def compare(pdm: prodimopy.read.read_prodimo,
         cbar2 = fig.colorbar(cs2,ax=ax2)
         ax2.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar2.set_label("log10 rhod")
-        ax2.text(0.05,0.95,'xp = %d'%xp,transform=ax2.transAxes)
-        ax2.text(0.05,0.90,'zp = %d'%zp,transform=ax2.transAxes)
-        ax2.text(0.05,0.85,'rhod(xp,zp) = %.2e'%rhod_p_rdm,transform=ax2.transAxes)
-        ax2.text(0.05,0.75,'rhod_min = %.2e' % rhod_min_rdm,transform=ax2.transAxes)
-        ax2.text(0.05,0.70,'rhod_max = %.2e' % rhod_max_rdm,transform=ax2.transAxes)
+        ax2.text(0.05,0.95,'rp = %.2f'%xp,transform=ax2.transAxes)
+        ax2.text(0.05,0.90,'zp = %.2f'%zp,transform=ax2.transAxes)
+        ax2.text(0.05,0.85,'rhod(rp,zp) = %.2e'%rhod_p_rdm,transform=ax2.transAxes)
+        ax2.text(0.05,0.75,'rp_max = %.2f' % xp_max,transform=ax2.transAxes)
+        ax2.text(0.05,0.70,'zp_max = %.2f' % zp_max,transform=ax2.transAxes)
+        ax2.scatter(xp_max,zp_max,marker='o',color='red')
         ax2.set_xlim(None,xmax)
         ax2.set_ylim(None,zmax)
         ax2.set_title("radmc3d, interpolated")
 
         # Residuals
-        vmin = -0.5
-        vmax = +0.5
+        vmin = -1.0
+        vmax = +1.0
         levels = np.linspace(vmin,vmax,21) 
         cs3 = ax3.contourf(pdm.x,pdm.z,residual_map,
                            vmin=vmin,vmax=vmax,levels=levels)
         ax3.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar3 = fig.colorbar(cs3,ax=ax3)
-        ax3.text(0.05,0.95,'xp = %d'%xp,transform=ax3.transAxes)
-        ax3.text(0.05,0.90,'zp = %d'%zp,transform=ax3.transAxes)
-        ax3.text(0.05,0.85,'relative diff. = %.1f%%'%diff,transform=ax3.transAxes)
+        ax3.text(0.05,0.95,'rp = %.2f'%xp,transform=ax3.transAxes)
+        ax3.text(0.05,0.90,'zp = %.2f'%zp,transform=ax3.transAxes)
+        ax3.text(0.05,0.85,'relative diff. at p = %.1f%%'%diff,transform=ax3.transAxes)
+        ax3.text(0.05,0.80,'max relative diff. = %.2f%%'%max_diff,transform=ax3.transAxes)
+        ax3.scatter(xp_max,zp_max,marker='o',color='red')
         ax3.set_xlim(None,xmax)
         ax3.set_ylim(None,zmax)
-
         ax3.set_title("ProDiMo - radmc3d ")
+
+        # Distribution of relative errors
+        ax4.hist(residual_map_flat_noNan.flatten(),bins=50)
+        ax4.set_xlabel('relative error')
+        ax4.set_ylabel('N')
 
         plt.tight_layout()
         plt.show()
