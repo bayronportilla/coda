@@ -1574,7 +1574,9 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
         if len(ps_rdm) == 1:
             # Create 2D interpolator to map rdm.rhodust onto cylindrical meshgrid            
-            interp = RegularGridInterpolator((rs_rdm,ts_rdm),rdm.rhodust[:,:,0,0],bounds_error=False)
+            interp = RegularGridInterpolator((rs_rdm,ts_rdm),rdm.rhodust[:,:,0,0],
+                                             bounds_error=False,
+                                             fill_value=np.nan)
 
             # Get prodimo grid
             xs_pdm = (pdm.x*u.au).to(u.cm).value
@@ -1602,27 +1604,59 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
     """ Check density maps """
     def check_rhod():
+        '''
+        >>> from radmc3dPy import analyze, models
+        >>> from prodimopy import read as pread
+        >>> from coda.mcmax import input
+        >>> pro=pread.read_prodimo("../../ProDiMo/run-034.copy")
+        >>> dust_rdm = analyze.readData(ddens=True) ; dust_rdm.readDustDens() ; dust_rdm.getSigmaDust()
+        >>> import coda
+        >>> importlib.reload(coda.mcmax.input)
+        >>> input.compare(pro,dust_rdm)
+        '''
         
         # Interpolate radmc3d rhod onto ProDiMo grid
         rhod_rdm_onto_pdm = interpolate_rhod_rdm_onto_pdm()
-        residual_map = pdm.rhod-rhod_rdm_onto_pdm
-        residual_map_flat = residual_map.flatten()
-        residual_map_flat_nonans = residual_map_flat[~np.isnan(residual_map_flat)] 
+
+        # Check how many points could not be interpolated due to 
+        # boundary overflows
+        number_of_nans = np.sum(np.isnan(rhod_rdm_onto_pdm)) # np.sum add the Trues(1) and Falses(0)
+        grid_size = rhod_rdm_onto_pdm.size
+        frac_of_nans = number_of_nans / grid_size
+        print("There are %d NaN out of %d grid points."%(number_of_nans,grid_size))
+        print("Fraction of nans is %.2f"%(frac_of_nans))
+        
+        print(np.isnan(rhod_rdm_onto_pdm).any())
+        if number_of_nans != 0:
+            masked_rhod_pdm = ~np.isnan(rhod_rdm_onto_pdm)*pdm.rhod
+            masked_rhod_rdm = np.nan_to_num(rhod_rdm_onto_pdm,nan=0.0)
+        else:
+            masked_rhod_pdm = pdm.rhod
+            masked_rhod_rdm = rhod_rdm_onto_pdm
+
+
+        # Compute residual map
+        residual_map = ( masked_rhod_pdm - masked_rhod_rdm ) / pdm.rhod
+
+        # Get maximum relative difference        
+        r_diff_max, z_diff_max = np.unravel_index((abs(residual_map)).argmax(),residual_map.shape)
+        rhod_diff_max = residual_map[r_diff_max,z_diff_max]
+
+
 
         
-        flat_index=np.nanargmin(residual_map)
-        row,col = np.unravel_index(flat_index,residual_map.shape)
-        print(row,col)
-        print(pdm.rhod[row,col])
-        print(rhod_rdm_onto_pdm[row,col])
-        print(abs(rhod_rdm_onto_pdm[row,col]-pdm.rhod[row,col])/pdm.rhod[row,col])
-        print(np.nanmin(residual_map))
+        #flat_index=np.nanargmin(residual_map)
+        #flat_index = np.argmax(arr)
+        #sys.exit()
+        
         #sys.exit()
         # Find stats 
+        '''
         mu = np.mean(residual_map_flat_nonans)
         std = np.std(residual_map_flat_nonans)
         standard_residual_map = (residual_map-mu)/std
         standard_residual_map_masked = np.ma.masked_invalid(standard_residual_map)
+        '''
         #print(standard_residual_map_masked.min())
         #print(standard_residual_map_masked.max())
         
@@ -1635,22 +1669,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
         rhod_p_rdm = rhod_rdm_onto_pdm[idxp,idzp]    
         diff = ( abs(rhod_p_rdm-rhod_p_pdm)/rhod_p_pdm )*100
 
-        #print(residual_map_flat_nonans)
-        #sys.exit()
-        #residual_map_flat_positive = residual_map_flat[residual_map_flat>0]
-        #residual_map_flat_negative = residual_map_flat[residual_map_flat<0]
-
-        #print(len(residual_map_flat))
-        #print(len(residual_map_flat_positive))
-        #print(len(residual_map_flat_negative))
-
-        #sys.exit()
         
-        #plt.hist(standard_residual_map.flatten(),density=True,bins=25) # There are positive values, why?!!!!!
-        #plt.show()
-
-        #print(np.nanmin(residual_map))   
-        #print(np.nanmax(residual_map))
 
         # Get extreme values
         rhod_max_pdm = np.nanmax(pdm.rhod)
@@ -1658,17 +1677,14 @@ def compare(pdm: prodimopy.read.read_prodimo,
         rhod_max_rdm = np.nanmax(rhod_rdm_onto_pdm)
         rhod_min_rdm = np.nanmin(rhod_rdm_onto_pdm)
 
-        print(rhod_max_pdm)
-    
-    
-        #print("radmc3d grid size nr: ",rdm.grid.nx)
         # Plot
         fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(12,4))
-        xmax = 1 
+        xmax = 1
         zmax = 1
 
         levels = np.logspace(np.log10(rhod_min_pdm),np.log10(rhod_max_pdm),15)
 
+        
         # ProDiMo
         cs1 = ax1.contourf(pdm.x,pdm.z,np.log10(pdm.rhod),
                            levels=np.log10(levels))
@@ -1685,14 +1701,8 @@ def compare(pdm: prodimopy.read.read_prodimo,
         ax1.set_ylim(None,zmax)
         ax1.set_title("ProDiMo")
         
+        
         # radmc3d
-        #levels = np.linspace(rhod_min_pdm,rhod_max_pdm,100)
-        
-        
-        #cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm),
-        #                   vmin=np.log10(rhod_min_pdm),
-        #                   vmax=np.log10(rhod_max_pdm))
-        
         cs2 = ax2.contourf(pdm.x,pdm.z,np.log10(rhod_rdm_onto_pdm),
                            levels=np.log10(levels))
         cbar2 = fig.colorbar(cs2,ax=ax2)
@@ -1711,7 +1721,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
         vmin = -0.5
         vmax = +0.5
         levels = np.linspace(vmin,vmax,21) 
-        cs3 = ax3.contourf(pdm.x,pdm.z,standard_residual_map_masked,
+        cs3 = ax3.contourf(pdm.x,pdm.z,residual_map,
                            vmin=vmin,vmax=vmax,levels=levels)
         ax3.scatter(xp,zp,marker='x',color='white',linewidth=2.5)
         cbar3 = fig.colorbar(cs3,ax=ax3)
@@ -1726,6 +1736,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
         plt.tight_layout()
         plt.show()
         
+
         
         return None
         
