@@ -395,8 +395,15 @@ def upload_file(file):
 
     return File(x,y,name)
 
+@u.quantity_input(Rin=u.au,
+                  Rout=u.au,
+                  M=u.Msun,
+                  Rarray=u.au,
+                  Rtap=u.au,
+                  Sigmain=u.g/u.cm**2)
 
 def make_density_profile(Rin,Rout,M,
+                         Rarray=None,
                          Rtap=None,
                          epsilon=None,
                          gamma=None,
@@ -413,6 +420,7 @@ def make_density_profile(Rin,Rout,M,
     Rin     : inner disk radius (au)
     Rout    : outer disk radius (au)
     M       : Mass of the disk (Msun)
+    Rarray  : Array of radii where to evaluate profile (au)
     R_tap   : tappering radius of the disk (au)
     epsilon : exponent of the linear-decay part
     gamma   : exponent of the exponentia-decay part
@@ -431,16 +439,15 @@ def make_density_profile(Rin,Rout,M,
     N_points    = 2**k+1
 
     # Dealing with input arguments
-    Rin     = Rin*u.au
-    Rout    = Rout*u.au
-    M       = M*u.Msun
-    Rtap    = Rtap*u.au if Rtap is not None else 100*u.au
-
+    if Rtap is None:Rtap=100*u.au
     if epsilon is None:epsilon=1.0
     if gamma is None:gamma=1.0
 
     # Array of radial points
-    rarray=np.linspace(Rin,Rout,N_points)
+    if Rarray is None:
+        rarray=np.linspace(Rin,Rout,N_points)
+    else:
+        rarray=Rarray
 
     # Finding Sigma0
     def integrand(x):
