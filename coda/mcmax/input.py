@@ -408,12 +408,16 @@ def make_density_profile(Rin,Rout,M,
                          epsilon=None,
                          gamma=None,
                          write=None,
-                         Sigmain=None):
+                         Sigmain=None,
+                         raduc=None,
+                         reduc=None):
 
     """
 
     Creates a surface density profile for a given value of the mass assuming an
-    exponential and tappered profile (see e.g., Eq. 1 in Portilla-Revelo et al. 2022)
+    exponential and tappered profile (see e.g., Eq. 1 in Portilla-Revelo et al. 2022). 
+    If raduc and reduc are not None, profile is then constructed following Eq. 71 in 
+    Woitke et al. 2023. 
 
     Parameters
     ----------
@@ -425,6 +429,8 @@ def make_density_profile(Rin,Rout,M,
     epsilon : exponent of the linear-decay part
     gamma   : exponent of the exponentia-decay part
     Sigmain : Boundary condition for the density at Rin (g/cm2)
+    raduc   : Radius up to which the column density initially increases in units of Rin
+    reduc   : Factor by which the column density is reduced at Rin
  
     Output
     ------
@@ -449,26 +455,35 @@ def make_density_profile(Rin,Rout,M,
     else:
         rarray=Rarray
 
+    # Sigma array
+    Sigma = []
+
+    if reduc is None and raduc is None:
+        def integrand(x):
+            return x * (Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
+        def Sigma_profile(x,Sigma0):
+            return Sigma0 * (Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
+    else:
+        if raduc > 1 and reduc < 1:
+            Rsoft = raduc*Rin
+            sharp = np.log(np.log(1/reduc)) / np.log(raduc)
+        elif raduc <= 1 or reduc >=1:
+            Rsoft = 0.0*u.au
+            sharp = 1.0
+        def integrand(x):    
+            return x * np.exp(-(Rsoft.value/x)**sharp)*(Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
+        def Sigma_profile(x,Sigma0):
+            return Sigma0 * np.exp(-(Rsoft.value/x)**sharp)*(Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
+            
     # Finding Sigma0
-    def integrand(x):
-        return x * (Rtap.value/x)**epsilon * np.exp(-(x/Rtap.value)**(2-gamma))
     Sigma0=(M / (2*np.pi * quad(integrand,Rin.value,Rout.value)[0]*u.au**2))
     Sigma0=Sigma0.to(u.g/u.cm**2)
 
-    # Sigma array
-    Sigma = []
     for i in range(len(rarray)):
         r = rarray[i].value
-        Sigma.append( Sigma0.value * (Rtap.value/r)**epsilon * np.exp(-(r/Rtap.value)**(2-gamma)) )
+        Sigma.append( Sigma_profile(r,Sigma0.value) )
     Sigma = np.array(Sigma)
     Sigma = Sigma*(u.g/u.cm**2)
-
-    # Write to a file
-    if write:
-        file=open("density.dat","w")
-        for i,j in zip(rarray,Sigma):
-            file.write("%.15e %.15e\n"%(i.value,j.value))
-        file.close()
 
     # If Sigmain is given
     if Sigmain is not None:
@@ -486,6 +501,13 @@ def make_density_profile(Rin,Rout,M,
         Sigma = Sigma*(u.g/u.cm**2)
         
         print(Mass)
+
+    # Write to a file
+    if write:
+        file=open("density.dat","w")
+        for i,j in zip(rarray,Sigma):
+            file.write("%.15e %.15e\n"%(i.value,j.value))
+        file.close()
         
     return rarray,Sigma
 
@@ -1524,7 +1546,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
         return None
 
-    #check_dust_mass()
+    check_dust_mass()
 
 
     """ Check surface density profile """
@@ -1566,7 +1588,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
         
         return None
     
-    #check_sigmad()
+    check_sigmad()
 
     
     def interpolate_rhod_rdm_onto_pdm():
