@@ -1546,7 +1546,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
 
         return None
 
-    check_dust_mass()
+    
 
 
     """ Check surface density profile """
@@ -1588,7 +1588,7 @@ def compare(pdm: prodimopy.read.read_prodimo,
         
         return None
     
-    check_sigmad()
+    
 
     
     def interpolate_rhod_rdm_onto_pdm():
@@ -1755,11 +1755,10 @@ def compare(pdm: prodimopy.read.read_prodimo,
         plt.tight_layout()
         plt.show()
         
-
-        
         return None
-        
-        
+    
+    check_dust_mass()
+    check_sigmad()
     check_rhod()
 
     
